@@ -1,0 +1,152 @@
+// Variables and Data Types
+var word = "variable"
+let immut = 18
+let explicitTyping: rune = 'ß'
+word <- "reassignment and interpolation: ${immut}"
+
+// Shorthand Assignment Operators
+var num = 19
+num <-+ 2
+num <-- 2
+num <-* 2
+num <-/ 2
+num <-% 2
+num <-^ 2
+
+// Numbers
+213 // int
+213u // uint
+0x6F // hexidecimal literal
+0b1011 // binary literal
+0o547 // octaliteral
+
+23.4 // float literal (less precision)
+23.4d // float64 literal (more precision)
+
+// Types: int{8, 16, 32, 64}, float{32, 64}, string, bool, rune, void {()}
+
+// Binary operators
+6 + 7 // Addition
+6 - 7 // Subtraction
+6 * 7 // Multiplication
+6 / 7 // Division
+6 % 7 // Modulus
+6 ^ 7 // Exponentiation
+
+// Boolean Logic Operators
+6 < 8, 8 > 6, 7 >= 7, 8 <= 9, 8 != 9, 8 = 8 // comparision operators
+a = b && b = c, a = b || b = c, !b // and, or, not
+b = a & c, b = a | c // shortened syntax for (b = a && b = c)
+
+// Range operator
+1..5 // creates an exclusive range (1, 2, 3, 4)
+1...5 // creates an inclusive range (1, 2, 3, 4, 5)
+1..2..10 // range with step (1, 3, 5, 7, 9)
+for i in 0 .. 3 do // looping over range
+array[..3], array[6..] // range operator for slicing
+
+// Functions
+fun add a b = a + b // basic function (int int -> int)
+add a b 
+
+fun add (a: int) (to b: int) : int = a + b // explicit typing and named parameters
+add 1 to: 4 // calling function with named parameters
+
+fun add a (b ?= 0) = a + b // optional/default parameters
+add 5
+
+let add = a b => a + b // anonymous function
+let add = ($0 + $1) // shorthand argument names (requires parenthesis)
+
+// Collections
+let arr = [1, 1, 2, 3, 5, 8, 13] // array
+arr[4] // 5
+var arr = []; arr.add(4) // mutable array
+let arr = [ for i in 1..10 -> i * i ] // array comprehensions
+
+var set = set["apple", "orange", "banana"] // set
+set.contains "apple"
+set.add "orange" // doesn't do anything, sets only store unique elements
+
+var map = ["H": 1, "He": 2, "Li": 3] // map
+map["H"] // 1
+map.add "Be" 4
+for (element, number) in map do () // map iteration
+map.keys; map.values
+
+// Control Flow
+if condition then () elif () else () // if/else statement
+for i in {range/array/map} do () // for loop
+while condition do () // while loop
+repeat () while condition // do while
+
+outer@ for i in 1..10 do // Loop labels
+    for j in 1..10 do
+	if j = 5 then break@outer
+
+// Special Types
+type Cat = { name: string, var age: int } // records
+let cat = { name = "Fluffy", age = 4 }
+let cat = { "Fluffy", 4 } // can be used if unambiguous
+let cat2 = { cat with name = "Tom" } // record construction from existing record
+
+let tuple = ("string", 1) // tuple
+let (str, num) = tuple // tuple destructuring
+let first = str.0; let second = str.1
+
+type Card = // Discriminated Unions
+    | King
+    | Queen
+    | Jack
+    | Number of int // use * for tuples (ex. int * int)
+let card = Jack
+
+type Short = int16 // type alias
+// Maybe add units of measure?
+// By default, all types are "pass-by-value" (unless one uses the & prefix operator?)
+
+// Extensions
+impl Int = 
+    fun repetitions task = 
+	for _ in 0..this do task() // this keyword refers to current instance
+
+3.repetitions (_ => println "Hello")
+
+// Pattern Matching
+when x is
+    1, 2 -> ()
+    1..5 -> ()
+    (_, 'a') -> ()
+    { _, field } -> ()
+    [_, 1, 2] -> ()
+    Color.Red -> ()
+    Some num where num = 5 -> ()
+    _ -> ()
+
+if let num = opt then () // if-let, short for when x is 
+                                                Some a -> ()
+						None -> ()
+
+// Where
+if let num = opt where opt = 3 then ()
+for i in 1..10 where i % 2 = 0 do ()
+
+
+
+//// ECS \\\\
+
+// Entities
+ent player = Transform PlayerController // entity creation
+ent 10 = Transform Collider // anonymous entity creation
+
+// Components
+com Transform =     // component declaration
+    position: Vec3
+    rotation: Vec3
+    scale: Vec3
+Transform@player // component access
+
+// System
+sys Transform Enemy | Update = // system declaration
+    if keyPressed Key.Left then Transform.position.x <-+ 1
+    // Valid timing modifiers: Awake (start of game), Start (default, on instantiation), Update, End (on destruction)

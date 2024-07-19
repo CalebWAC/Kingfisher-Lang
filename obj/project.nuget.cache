@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "/sDycfsEr101whRmwOY4x8Yurzw3i/SKKPv5Dye8dwntSkGTPEb2Juf4uzOUL/U+yMAUY8VA4oSjnQwCAMu9OA==",
+  "success": true,
+  "projectFilePath": "F:\\Kingfisher Language\\Kingfisher Language.fsproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\caleb\\.nuget\\packages\\fsharp.core\\7.0.400\\fsharp.core.7.0.400.nupkg.sha512"
+  ],
+  "logs": []
+}

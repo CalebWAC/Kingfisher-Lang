@@ -1,0 +1,57 @@
+program -> (expression | binding | typeDeclaration)+
+
+iden -> [A..Za..z0..9]+
+type -> (`int` | `i16` | `i8` | `i64` | `float` | `f64` | `string` | `bool` | `rune`) (`array` | `set`)?
+
+numericLiteral -> intLiteral | floatLiteral
+specialInt -> `0` (`x` [0..9A..F]+ | `b` (0 | 1)+ | `o` [0..7]+)
+intLiteral -> ([0..9]+ `u`?) | specialInt
+floatLiteral -> [0..9]* `.` [0..9]+ `d`?
+
+boolLiteral -> `true` | `false`
+stringLiteral -> `'` .* `'`
+runeLiteral -> ``` . ```
+voidLiteral -> `()`
+
+collectionLiteral -> mapLiteral | arrayLiteral
+arrayLiteral -> `set`? `[` (expr (`,` expr)*) | forExpression `]`
+mapLiteral -> `[` expr `:` expr (`,` expr `:` expr)* `]`
+
+recordLiteral -> `{` (iden `with`)? iden `=` expr (`,` iden `=` expr)* `}`
+tupleLiteral -> `(` expr (`,` expr)+ `)`
+
+binding -> immutableBinding | mutableBinding | functionDeclaration | entityBinding | systemDeclaration | reassignment
+
+immutableBinding -> `let` iden (`:` type)? `=` (expr | `{` expr+ `}`)
+mutableBinding -> `var` iden (`:` type)? `=` `{` expr+ `}`
+reassignment -> iden `<-` (`+`|`-`|`*`|`/`|`%`|`^`)? expr+
+
+functionDeclaration -> `fun` iden (iden | `(` iden? iden (`:` type)? `)`)* `=` `{` expr+ `}` 
+
+entityBinding -> `ent` (iden | intLiteral) `=` (expr | `{` expr+ `}`)
+systemDeclaration -> `sys` iden+ (`|` iden)? `=` (expr | `{` expr+ `}`)
+
+typeDeclaration -> recordDeclaration | unionDeclaration | componentDeclaration | typeAlias | extension
+
+recordDeclaration -> `type` iden `=` `{` (`var`? iden `:` type) (`,` (`var`? iden `:` type))*  `}`
+unionDeclaration -> `type` iden `=` `{` (`|` iden (`of` type (`*` type)* )? )+ `}`
+componentDeclaration -> `com` iden `=` `{` (iden `:` type)+ `}`
+typeAlias -> `type` iden `=` type
+
+extension -> `impl` iden `=` `{` (binding | typeDeclaration)+ `}`
+
+ifExpression -> `if` (expr | `let` iden `=` expr) (`where` expr)? `then` `{` expr+ `}` (`elif` (expr | `let` iden `=` expr) (`where` expr)? `then` `{` expr+ `}`)* (`else` `{` expr+ `}`)? 
+forExpression -> (iden `@`)? `for` iden `in` expr  (`where` expr)? `do` `{` expr+ `}`
+whileExpression -> `while` expr `do` `{` expr+ `}`
+matchExpression -> `when` expr `is` `{` (expr `->` `{` expr+ `}`)+ `}`
+
+expr -> ifExpression | forExpression | whileExpression | matchExpression
+     -> expr `||` expr
+     -> expr `&&` expr
+     -> expr `=` expr ((`&` | `|`) expr)? | expr `!=` ((`&` | `|`) expr)?
+     -> expr `>=` expr ((`&` | `|`) expr)? | expr `<=` expr ((`&` | `|`) expr)? | expr `>` expr ((`&` | `|`) expr)? | expr `<` expr ((`&` | `|`) expr)?
+     -> `!` expr | `-` expr
+     -> `(` expr `)`
+     -> iden ((iden `:`)? expr)* | iden `[` expr `]` | iden (`.` | `@`) iden
+     -> expr? (`..` | `...`) ((`..` | `...`) expr (`..` | `...`))? expr?
+     -> numericLiteral | boolLiteral | stringLiteral | runeLiteral | voidLiteral | collectionLiteral | recordLiteral | tupleLiteral
