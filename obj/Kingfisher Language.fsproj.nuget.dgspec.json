@@ -41,6 +41,10 @@
               "target": "Package",
               "version": "[7.0.400, )",
               "generatePathProperty": true
+            },
+            "Piglet": {
+              "target": "Package",
+              "version": "[1.5.0, )"
             }
           },
           "imports": [

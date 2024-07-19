@@ -1,2 +1,5 @@
-﻿// For more information see https://aka.ms/fsharp-console-apps
-printfn "Hello from F#"
+﻿open Piglet.Parser
+
+let configurator = ParserFactory.Configure<obj>()
+
+let nonTerminal = configurator.CreateNonTerminal()

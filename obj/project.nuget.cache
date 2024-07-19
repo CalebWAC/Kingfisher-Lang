@@ -1,10 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "/sDycfsEr101whRmwOY4x8Yurzw3i/SKKPv5Dye8dwntSkGTPEb2Juf4uzOUL/U+yMAUY8VA4oSjnQwCAMu9OA==",
+  "dgSpecHash": "fGKoVPXFzrhP+o/oWNILjVXQ+C3JEpjICWAzYy/XUxBsJzylAMMNvxkbbKDQVWew7knyxhNpxou9DegGC1vzLA==",
   "success": true,
   "projectFilePath": "F:\\Kingfisher Language\\Kingfisher Language.fsproj",
   "expectedPackageFiles": [
-    "C:\\Users\\caleb\\.nuget\\packages\\fsharp.core\\7.0.400\\fsharp.core.7.0.400.nupkg.sha512"
+    "C:\\Users\\caleb\\.nuget\\packages\\fsharp.core\\7.0.400\\fsharp.core.7.0.400.nupkg.sha512",
+    "C:\\Users\\caleb\\.nuget\\packages\\piglet\\1.5.0\\piglet.1.5.0.nupkg.sha512"
   ],
   "logs": []
 }

@@ -55,6 +55,19 @@
             "locale": "zh-Hant"
           }
         }
+      },
+      "Piglet/1.5.0": {
+        "type": "package",
+        "compile": {
+          "lib/netstandard2.0/Piglet.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/netstandard2.0/Piglet.dll": {
+            "related": ".xml"
+          }
+        }
       }
     }
   },
@@ -100,11 +113,31 @@
         "lib/netstandard2.1/zh-Hans/FSharp.Core.resources.dll",
         "lib/netstandard2.1/zh-Hant/FSharp.Core.resources.dll"
       ]
+    },
+    "Piglet/1.5.0": {
+      "sha512": "NDiczqowKTNB3gqI6zSbDMMVhAkb8xocKtk6L3DUQYKqUXV3dymWwRSQuFy6ZiWOqgvp1ypN1qXqrVst/luADA==",
+      "type": "package",
+      "path": "piglet/1.5.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/net40/Piglet.dll",
+        "lib/net40/Piglet.xml",
+        "lib/net45/Piglet.dll",
+        "lib/net45/Piglet.xml",
+        "lib/netstandard1.6/Piglet.dll",
+        "lib/netstandard1.6/Piglet.xml",
+        "lib/netstandard2.0/Piglet.dll",
+        "lib/netstandard2.0/Piglet.xml",
+        "piglet.1.5.0.nupkg.sha512",
+        "piglet.nuspec"
+      ]
     }
   },
   "projectFileDependencyGroups": {
     "net7.0": [
-      "FSharp.Core >= 7.0.400"
+      "FSharp.Core >= 7.0.400",
+      "Piglet >= 1.5.0"
     ]
   },
   "packageFolders": {
@@ -147,6 +180,10 @@
             "target": "Package",
             "version": "[7.0.400, )",
             "generatePathProperty": true
+          },
+          "Piglet": {
+            "target": "Package",
+            "version": "[1.5.0, )"
           }
         },
         "imports": [
