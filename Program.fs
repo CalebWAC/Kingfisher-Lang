@@ -1,6 +1,6 @@
 ﻿open ParserLibrary
 open ParserLibrary.Core
 
-let input = "092"
+let input = "[1, 4, 6, 5]"
 
-printfn $"{run parse3DigitsInt input}"
+printfn $"{run parray input}"

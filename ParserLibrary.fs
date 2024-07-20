@@ -27,23 +27,30 @@ module Core =
         
         Parser createParser
 
+    
+    // Convert normal -> Parser to Parser -> Parser
+    let bind f p =
+        let createParser input =
+            let result = run p input
+            match result with
+            | Failure err -> Failure err
+            | Success (value, remaining) ->
+                let p2 = f value
+                run p2 remaining
+        Parser createParser
+    let (>>=) p f = bind f p
+    
+    // Converts value to parser of value
+    let returnP x = 
+        let createParser input = Success(x, input)
+        Parser createParser
+    
     // Matches one parser then the other
     let andThen p1 p2 =
-        let createParser input =
-            let result1 = run p1 input
-
-            match result1 with
-            | Failure err -> Failure err
-            | Success (value1, remaining1) ->
-                let result2 = run p2 remaining1
-
-                match result2 with
-                | Failure err -> Failure err
-                | Success (value2, remaining2) ->
-                    let newValue = (value1, value2)
-                    Success (newValue, remaining2)
-
-        Parser createParser
+        p1 >>= (fun p1Result ->
+        p2 >>= (fun p2Result ->
+            returnP (p1Result, p2Result)))
+        
     let (.>>.) = andThen
 
     // Matches one parser or the other
@@ -69,25 +76,13 @@ module Core =
         chars
         |> List.map pchar
         |> choice
-
+    
     // Converts function to parser function
-    let map func parser =
-        let createParser input =
-            let result = run parser input
-            
-            match result with
-            | Success (value, remaining) -> 
-                Success (func value, remaining)
-            | Failure err -> Failure err
+    let map func =
+        bind (func >> returnP)
         
-        Parser createParser
     let (<!>) = map
     let (|>>) x f = map f x
-    
-    // Converts value to parser of value
-    let returnP x = 
-        let createParser input = Success(x, input)
-        Parser createParser
     
     // Separates parser of function to parser parametered function
     let apply fP xP =
@@ -101,17 +96,94 @@ module Core =
     let startsWith =
         let swNormal (str : string) (prefix : string) = str.StartsWith prefix 
         lift2 swNormal
+    
+    // Sequence of parsers
+    let rec sequence parsers =
+        let cons head tail = head::tail
+        let consP = lift2 cons
+        
+        match parsers with
+        | [] -> returnP []
+        | head::tail ->
+            consP head (sequence tail)
+
+    let charListToStr charList =
+        charList |> List.toArray |> String
+
+    let rec parseZeroOrMore parser input =
+        let result = run parser input
+        
+        match result with
+        | Failure err -> ([], input)
+        | Success (first, rest) ->
+            let (subsequent, remaining) = parseZeroOrMore parser rest
+            let values = first::subsequent
+            (values, remaining)
+    
+    // Match zero or more (*)
+    let many parser =
+        let createParser input =
+            Success (parseZeroOrMore parser input)
+        
+        Parser createParser
+    
+    // Match one or more (+)
+    let many1 parser =
+        parser >>= (fun head ->
+        many parser >>= (fun tail ->
+            returnP (head::tail)))
+    
+    // Match optionally (?)
+    let opt p =
+        let some = p |>> Some
+        let none = returnP None
+        some <|> none
+
+    // AndThen with result ignoring
+    let (.>>) p1 p2 = p1 .>>. p2 |>> fun (a, b) -> a
+    let (>>.) p1 p2 = p1 .>>. p2 |>> fun (a, b) -> b
+         
+    let between p1 p2 p3 = p1 >>. p2 .>> p3
+
+    let sepBy1 p sep =
+        let sepThenP = sep >>. p
+        p .>>. many sepThenP
+        |>> fun (p, pList) -> p::pList
+    let sepBy p sep =
+        sepBy1 p sep <|> returnP []
 
 
 // Higher-abstracted functions
 open Core
 
+let whitespaceChar = anyOf [' '; '\t'; '\n']
+let whitespace = many whitespaceChar
+
 let parseDigit = anyOf ['0'..'9']
+let digits = many1 parseDigit
 let parseLetter = ['a'..'z'] @ ['A'..'Z'] |> anyOf
 let parseAlphanumeric = parseLetter <|> parseDigit
 
-let parse3Digits =
-    (parseDigit .>>. parseDigit .>>. parseDigit)
-    |>> fun ((c1, c2), c3) -> String [| c1; c2; c3; |]
+let identifier str =
+    str
+    |> List.ofSeq
+    |> List.map pchar
+    |> sequence
+    |>> charListToStr
     
-let parse3DigitsInt = map int parse3Digits
+let pint =
+    let resultToInt (sign, dlist) =
+        let i = dlist |> List.toArray |> String |> int
+        match sign with
+        | Some _ -> -i
+        | None -> i
+        
+    opt (pchar '-') .>>. digits
+    |>> resultToInt
+    
+let pquote = pchar '\''
+let pstring = between pquote (many parseAlphanumeric |>> charListToStr) pquote
+
+let parray = between (pchar '[')
+                 (sepBy1 pint (pchar ',' .>> whitespace))
+                 (pchar ']')
