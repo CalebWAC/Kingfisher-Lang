@@ -1,5 +1,6 @@
-﻿open Piglet.Parser
+﻿open ParserLibrary
+open ParserLibrary.Core
 
-let configurator = ParserFactory.Configure<obj>()
+let input = "092"
 
-let nonTerminal = configurator.CreateNonTerminal()
+printfn $"{run parse3DigitsInt input}"

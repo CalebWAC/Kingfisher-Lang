@@ -1,0 +1,29 @@
+F:\Kingfisher Language\bin\Debug\net7.0\Kingfisher Language.exe
+F:\Kingfisher Language\bin\Debug\net7.0\Kingfisher Language.deps.json
+F:\Kingfisher Language\bin\Debug\net7.0\Kingfisher Language.runtimeconfig.json
+F:\Kingfisher Language\bin\Debug\net7.0\Kingfisher Language.dll
+F:\Kingfisher Language\bin\Debug\net7.0\Kingfisher Language.pdb
+F:\Kingfisher Language\bin\Debug\net7.0\FSharp.Core.dll
+F:\Kingfisher Language\bin\Debug\net7.0\cs\FSharp.Core.resources.dll
+F:\Kingfisher Language\bin\Debug\net7.0\de\FSharp.Core.resources.dll
+F:\Kingfisher Language\bin\Debug\net7.0\es\FSharp.Core.resources.dll
+F:\Kingfisher Language\bin\Debug\net7.0\fr\FSharp.Core.resources.dll
+F:\Kingfisher Language\bin\Debug\net7.0\it\FSharp.Core.resources.dll
+F:\Kingfisher Language\bin\Debug\net7.0\ja\FSharp.Core.resources.dll
+F:\Kingfisher Language\bin\Debug\net7.0\ko\FSharp.Core.resources.dll
+F:\Kingfisher Language\bin\Debug\net7.0\pl\FSharp.Core.resources.dll
+F:\Kingfisher Language\bin\Debug\net7.0\pt-BR\FSharp.Core.resources.dll
+F:\Kingfisher Language\bin\Debug\net7.0\ru\FSharp.Core.resources.dll
+F:\Kingfisher Language\bin\Debug\net7.0\tr\FSharp.Core.resources.dll
+F:\Kingfisher Language\bin\Debug\net7.0\zh-Hans\FSharp.Core.resources.dll
+F:\Kingfisher Language\bin\Debug\net7.0\zh-Hant\FSharp.Core.resources.dll
+F:\Kingfisher Language\obj\Debug\net7.0\Kingfisher Language.fsproj.AssemblyReference.cache
+F:\Kingfisher Language\obj\Debug\net7.0\Kingfisher Language.AssemblyInfoInputs.cache
+F:\Kingfisher Language\obj\Debug\net7.0\Kingfisher Language.AssemblyInfo.fs
+F:\Kingfisher Language\obj\Debug\net7.0\Kingfisher Language.fsproj.CoreCompileInputs.cache
+F:\Kingfisher Language\obj\Debug\net7.0\Kingfisher Language.fsproj.CopyComplete
+F:\Kingfisher Language\obj\Debug\net7.0\Kingfisher Language.dll
+F:\Kingfisher Language\obj\Debug\net7.0\refint\Kingfisher Language.dll
+F:\Kingfisher Language\obj\Debug\net7.0\Kingfisher Language.pdb
+F:\Kingfisher Language\obj\Debug\net7.0\Kingfisher Language.genruntimeconfig.cache
+F:\Kingfisher Language\obj\Debug\net7.0\ref\Kingfisher Language.dll
