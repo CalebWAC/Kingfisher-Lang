@@ -1,6 +1,7 @@
-﻿open ParserLibrary
-open ParserLibrary.Core
+﻿open ParserLibrary.Core
+open ParserLibrary.Std
 
-let input = "[1, 4, 6, 5]"
+let input = "sdf"
 
-printfn $"{run parray input}"
+run digit input
+|> printResult

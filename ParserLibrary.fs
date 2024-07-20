@@ -1,60 +1,108 @@
 module ParserLibrary
 
 open System
+    
+// Line position and column tracking
+module InputState =
+    type Position = { line : int; column : int }
+    type InputState = { lines: string array; position: Position }
+    
+    let initialPos = { line = 0; column = 0 }
+    let incrCol pos = { pos with column = pos.column + 1 }
+    let incrLine pos = { line = pos.line + 1; column = 0 }
+    
+    let fromStr str =
+        if String.IsNullOrEmpty str then { lines = [||]; position = initialPos }
+        else
+            let separators = [| "\r\n"; "\n" |]
+            let lines = str.Split(separators, StringSplitOptions.None)
+            { lines = lines; position = initialPos }
 
 // Core functions for parser composition
-module Core = 
+module Core =
+    type ParserLabel = string
+    type ParserError = string
+    
     type ParseResult<'a> =
         | Success of 'a
-        | Failure of string
+        | Failure of ParserLabel * ParserError
 
-    type Parser<'T> = Parser of (string -> ParseResult<'T * string>)
+    type Parser<'T> = {
+        parseFunc : (string -> ParseResult<'T * string>)
+        label : ParserLabel
+    }    
 
-    let run parser input =
-        let (Parser func) = parser
-        func input
+    // Label and Error Messages
+    let printResult result =
+        match result with
+        | Success (value, _) -> printfn $"{value}"
+        | Failure (label, error) -> printfn $"Error parsing {label}: {error}"
+    
+    let setLabel parser newLabel =
+        let createParser input =
+            let result = parser.parseFunc input
+            match result with
+            | Success s -> Success s
+            | Failure (oldLabel, err) -> Failure (newLabel, err)
+        
+        { parseFunc = createParser; label = newLabel }
+    let (<?>) = setLabel
+    
+    
+    let run (parser : Parser<_>) input =
+        parser.parseFunc input
 
+    let satisfy predicate label =
+        let createParser input =
+            if String.IsNullOrEmpty input then
+                Failure (label, "No more input")
+            else
+                let first = input[0]
+                if predicate first then
+                    let remaining = input[1..]
+                    Success (first, remaining)
+                else
+                    Failure (label, $"Unexpected {first}")
+        { parseFunc = createParser; label = label }
+    
     // Matches a single character
     let pchar charToMatch =
-        let createParser str =
-            if String.IsNullOrEmpty str then
-                Failure "No more input"
-            else
-                if str[0] = charToMatch then
-                    Success (charToMatch, str[1..])
-                else
-                    Failure $"Expecting {charToMatch}. Found {str[0]}"
-        
-        Parser createParser
+        let predicate c = c = charToMatch
+        let label = $"{charToMatch}"
+        satisfy predicate label
 
     
     // Convert normal -> Parser to Parser -> Parser
     let bind f p =
+        let label = "unknown"
         let createParser input =
             let result = run p input
             match result with
-            | Failure err -> Failure err
+            | Failure (label, err) -> Failure (label, err)
             | Success (value, remaining) ->
                 let p2 = f value
                 run p2 remaining
-        Parser createParser
+        { parseFunc = createParser; label = label }
     let (>>=) p f = bind f p
     
     // Converts value to parser of value
-    let returnP x = 
+    let returnP x =
+        let label = $"{x}"
         let createParser input = Success(x, input)
-        Parser createParser
+        { parseFunc = createParser; label = label }
     
     // Matches one parser then the other
     let andThen p1 p2 =
         p1 >>= (fun p1Result ->
         p2 >>= (fun p2Result ->
             returnP (p1Result, p2Result)))
+        <?> $"{p1.label} and then {p2.label}"
         
     let (.>>.) = andThen
 
     // Matches one parser or the other
     let orElse p1 p2 =
+        let label = $"{p1.label} or else {p2.label}"
         let createParser input =
             let result1 = run p1 input
 
@@ -65,7 +113,7 @@ module Core =
 
                 result2
             
-        Parser createParser
+        { parseFunc = createParser; label = label }
     let (<|>) = orElse
 
     // Matches one of any given parser
@@ -76,6 +124,7 @@ module Core =
         chars
         |> List.map pchar
         |> choice
+        <?> $"any of {chars}"
     
     // Converts function to parser function
     let map func =
@@ -114,7 +163,7 @@ module Core =
         let result = run parser input
         
         match result with
-        | Failure err -> ([], input)
+        | Failure (label, err) -> ([], input)
         | Success (first, rest) ->
             let (subsequent, remaining) = parseZeroOrMore parser rest
             let values = first::subsequent
@@ -122,13 +171,15 @@ module Core =
     
     // Match zero or more (*)
     let many parser =
+        let label = $"many {parser.label}"
         let createParser input =
             Success (parseZeroOrMore parser input)
         
-        Parser createParser
+        { parseFunc = createParser; label = label }
     
     // Match one or more (+)
     let many1 parser =
+        let label = $"many1 {parser.label}"
         parser >>= (fun head ->
         many parser >>= (fun tail ->
             returnP (head::tail)))
@@ -154,36 +205,37 @@ module Core =
 
 
 // Higher-abstracted functions
-open Core
+module Std = 
+    open Core
 
-let whitespaceChar = anyOf [' '; '\t'; '\n']
-let whitespace = many whitespaceChar
+    let whitespaceChar = satisfy Char.IsWhiteSpace "whitespace"
+    let whitespace = many whitespaceChar
 
-let parseDigit = anyOf ['0'..'9']
-let digits = many1 parseDigit
-let parseLetter = ['a'..'z'] @ ['A'..'Z'] |> anyOf
-let parseAlphanumeric = parseLetter <|> parseDigit
+    let digit = satisfy Char.IsDigit "digit"
+    let digits = many1 digit
+    let parseLetter = ['a'..'z'] @ ['A'..'Z'] |> anyOf
+    let parseAlphanumeric = parseLetter <|> digit
 
-let identifier str =
-    str
-    |> List.ofSeq
-    |> List.map pchar
-    |> sequence
-    |>> charListToStr
-    
-let pint =
-    let resultToInt (sign, dlist) =
-        let i = dlist |> List.toArray |> String |> int
-        match sign with
-        | Some _ -> -i
-        | None -> i
+    let identifier str =
+        str
+        |> List.ofSeq
+        |> List.map pchar
+        |> sequence
+        |>> charListToStr
         
-    opt (pchar '-') .>>. digits
-    |>> resultToInt
-    
-let pquote = pchar '\''
-let pstring = between pquote (many parseAlphanumeric |>> charListToStr) pquote
+    let pint =
+        let resultToInt (sign, dlist) =
+            let i = dlist |> List.toArray |> String |> int
+            match sign with
+            | Some _ -> -i
+            | None -> i
+            
+        opt (pchar '-') .>>. digits
+        |>> resultToInt
+        
+    let pquote = pchar '\''
+    let pstring = between pquote (many parseAlphanumeric |>> charListToStr) pquote 
 
-let parray = between (pchar '[')
-                 (sepBy1 pint (pchar ',' .>> whitespace))
-                 (pchar ']')
+    let parray = between (pchar '[')
+                     (sepBy1 pint (pchar ',' .>> whitespace))
+                     (pchar ']')
