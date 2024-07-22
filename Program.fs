@@ -1,7 +1,8 @@
 ﻿open ParserLibrary.Core
 open ParserLibrary.Std
 
-let input = "sdf"
+let input = "1827   -3.l94"
+let parser = intLit .>> whitespace .>>. floatLit
 
-run digit input
+runString parser input
 |> printResult
