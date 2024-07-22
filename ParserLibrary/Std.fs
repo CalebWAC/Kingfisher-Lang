@@ -1,8 +1,9 @@
 // Higher-abstracted functions
 module ParserLibrary.Std
 
-open System
+open AST
 open Core
+open System
 
 //// Character Based \\\\
 
@@ -39,9 +40,7 @@ let pquote = pchar '\'' <?> "quote"
 
 
 //// String Based \\\\
-
-// Matches a string (identifier)
-let identifier str =
+let keyword str =
     str
     |> List.ofSeq
     |> List.map pchar
@@ -49,7 +48,11 @@ let identifier str =
     |>> charListToStr
     <?> str
 
-let stringLit = between pquote (many parseAlphanumeric |>> charListToStr) pquote 
+let stringLit = between pquote (many parseAlphanumeric |>> charListToStr) pquote
+                |>> StringLiteral
+                <?> "string"
+
+let identifier = many1Chars parseAlphanumeric <?> "identifier"
 
 
 //// Number Based \\\\
@@ -62,6 +65,7 @@ let intLit =
          
     opt (pchar '-') .>>. many1Chars digit
     |>> resultToInt
+    |>> IntLiteral
     <?> "int"
     
 let floatLit =
@@ -73,10 +77,48 @@ let floatLit =
         
     opt (pchar '-') .>>. manyChars digit .>>. pchar '.' .>>. many1Chars digit
     |>> resultToFloat
+    |>> FloatLiteral
     <?> "float"
         
 
-//// Complex Literals \\\\
-let arrayLit = opt (identifier "set") .>> whitespace .>>. between (pchar '[')
-                 (sepBy1 intLit (pchar ',' .>> whitespace))
-                 (pchar ']')
+//// Other Literals \\\\
+let boolLit =
+    keyword "true" <|> keyword "false"
+    |>> bool.Parse
+    |>> BoolLiteral
+    <?> "bool"
+    
+let runeLit = between (pchar '`') parseAlphanumeric (pchar '`') |>> RuneLiteral
+let voidLit = keyword "()"
+
+let literal  = intLit <|> floatLit <|> stringLit <|> boolLit <|> runeLit
+let explicitType = pchar ':' >>. whitespace >>.
+                   (keyword "int" <|> keyword "float" <|> keyword "string" <|> keyword "bool" <|> keyword "rune") .>>
+                   whitespace .>>. opt (keyword "array" <|> keyword "set")
+                   <?> "explicit type"
+
+let arrayLit = opt (keyword "set") .>> whitespace .>>. between (pchar '[')
+                 (sepBy1 literal (pchar ',' .>> whitespace))
+                 (pchar ']') <?> "array/set"
+            
+let mapLit = between (pchar '[')
+                (sepBy1
+                    (literal .>> whitespace .>> pchar ':' .>> whitespace .>>. literal)
+                    (pchar ',' .>> whitespace))
+                (pchar ']') <?> "map"
+                
+let recordLit = between (pchar '{')
+                    (whitespace >>. opt (identifier .>> whitespace .>> keyword "with") .>> whitespace .>>.
+                     (sepBy1 (identifier .>> whitespace .>> pchar '=' .>> whitespace .>>. literal .>> whitespace) (pchar ',' .>> whitespace)))
+                    (pchar '}') <?> "record"
+                    
+let tupleLit = between (pchar '(')
+                    (sepBy1 literal (pchar ',' .>> whitespace))
+                    (pchar ')') <?> "tuple"
+                    
+let range = intLit .>> keyword ".." .>>. opt (intLit .>> keyword "..") .>>. intLit
+
+
+//// Bindings \\\\
+let immutableBinding = keyword "let" >>. whitespace >>. identifier .>> whitespace .>>. opt explicitType .>> whitespace .>> keyword "=" .>> whitespace .>>. literal
+let mutableBinding = keyword "var" >>. whitespace >>. identifier .>> whitespace .>>. opt explicitType .>> whitespace .>> keyword "=" .>> whitespace .>>. literal

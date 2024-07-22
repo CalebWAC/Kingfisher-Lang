@@ -23,7 +23,7 @@ let printResult result =
     | Failure (label, error, parserPos) ->
         let col = parserPos.position.column
         let line = parserPos.position.line
-        let caret = sprintf "%*s^%s" col "" error
+        let caret = sprintf "%*s^ %s" col "" error
         printfn $"At line {line} col {col}: Error parsing {label}\n{currentLine parserPos}\n{caret}"
 
 let setLabel parser newLabel =

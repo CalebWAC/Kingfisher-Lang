@@ -1,8 +1,7 @@
 ﻿open ParserLibrary.Core
 open ParserLibrary.Std
 
-let input = "1827   -3.l94"
-let parser = intLit .>> whitespace .>>. floatLit
+let input = "let var: float array = 18.9"
 
-runString parser input
+runString immutableBinding input
 |> printResult
