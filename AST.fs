@@ -1,4 +1,6 @@
-module AST 
+module AST
+
+open System.Linq.Expressions 
 
 type Program = Statement list
 
@@ -103,18 +105,21 @@ and Expr =
     | MatchExpr of MatchExpr
     | Expression of Expression
 
-and IfExpr = IfExpress * IfExpress option * Else option
-and IfExpress = Expression * LetStatement option * Expression option * Statement list
-and LetStatement = Identifier * Expression
-and Else = Statement list
+and IfExpr = (IfExpress * IfExpress list option) * Expression list  // change Expression to statement
+and IfExpress = (IfCondition * Expression option) * Expression list // change!
+and IfCondition =
+    | Expr of Expression
+    | LetStatement of Identifier  * Expression
 
 and ForExpr = Identifier option * Identifier * Expr * Expression option * Statement list
 and WhileExpr = Expr * Statement list
 and MatchExpr = Expr * Expression list * Statement list
 
 and Expression = 
-    | BinaryExpr of BinaryExpr
-    | UnaryExpr of char * Expression // Change this to operator
+    | BinaryLogicalExpr of (Expression * BinaryLogicalOperator) * Expression
+    | BinaryComparisonExpr of (Expression * BinaryComparisonOperator) * Expression
+    | BinaryArithmeticExpr of (Expression * BinaryArithmeticOperator) * Expression
+    | UnaryExpr of UnaryOperator * Expression
     | IdentifierExpr of Identifier
     | FunctionCallExpr of Expression * Expression list
     | ArrayExpr of Identifier * Expression
@@ -127,12 +132,7 @@ and RangeType =
     | Exclusive
     | Inclusive
     | ExclusiveStep of Expression
-    | InclusiveStep of Expression
-
-and BinaryExpr =
-    | BinaryLogicalExpr of Expression * BinaryLogicalOperator * Expression
-    | BinaryComparisonExpr of Expression * BinaryComparisonOperator * Expression
-    | BinaryArithmeticOperator of Expression * BinaryArithmeticOperator * Expr
+    | InclusiveStep of Expression    
 
 and Literal = 
     | IntLiteral of int
