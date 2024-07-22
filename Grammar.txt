@@ -26,7 +26,7 @@ immutableBinding -> `let` iden (`:` type)? `=` (expr | `{` expr+ `}`)
 mutableBinding -> `var` iden (`:` type)? `=` `{` expr+ `}`
 reassignment -> iden `<-` (`+`|`-`|`*`|`/`|`%`|`^`)? expr+
 
-functionDeclaration -> `fun` iden (iden | `(` iden? iden (`:` type)? `)`)* `=` `{` expr+ `}` 
+functionDeclaration -> `fun` iden (iden |. `(` iden? iden (`:` type)? `)`)* `=` `{` expr+ `}` 
 
 entityBinding -> `ent` (iden | intLiteral) `=` iden+
 systemDeclaration -> `sys` iden+ (`|` iden)? `=` (expr | `{` expr+ `}`)

@@ -97,31 +97,31 @@ and UnaryOperator =
     | Negative
 
 and Expr =
-    | IfExpression of IfExpression
-    | ForExpression of ForExpression
-    | WhileExpression of WhileExpression
-    | MatchExpression of MatchExpression
+    | IfExpr of IfExpr
+    | ForExpr of ForExpr
+    | WhileExpr of WhileExpr
+    | MatchExpr of MatchExpr
     | Expression of Expression
 
-and IfExpression = IfExpr * IfExpr option * Else option
-and IfExpr = Expression * LetStatement option * Expression option * Statement list
+and IfExpr = IfExpress * IfExpress option * Else option
+and IfExpress = Expression * LetStatement option * Expression option * Statement list
 and LetStatement = Identifier * Expression
 and Else = Statement list
 
-and ForExpression = Identifier option * Identifier * Expr * Expression option * Statement list
-and WhileExpression = Expr * Statement list
-and MatchExpression = Expr * Expression list * Statement list
+and ForExpr = Identifier option * Identifier * Expr * Expression option * Statement list
+and WhileExpr = Expr * Statement list
+and MatchExpr = Expr * Expression list * Statement list
 
 and Expression = 
-    | BinaryExpression of BinaryExpression
-    | UnaryExpression of UnaryOperator * Expression
-    | IdentifierExpression of Identifier
-    | FunctionCallExpression of Identifier * Expression list
-    | ArrayExpression of Identifier * Expression
-    | DataAccessExpression of Identifier * Identifier
-    | ComponentAccessExpression of Identifier * Identifier
-    | RangeExpression of Expression * RangeType * Expression
-    | LiteralExpression of Literal
+    | BinaryExpr of BinaryExpr
+    | UnaryExpr of char * Expression // Change this to operator
+    | IdentifierExpr of Identifier
+    | FunctionCallExpr of Expression * Expression list
+    | ArrayExpr of Identifier * Expression
+    | DataAccessExpr of Identifier * Identifier
+    | ComponentAccessExpr of Identifier * Identifier
+    | RangeExpr of Expression * RangeType * Expression
+    | LiteralExpr of Literal
 
 and RangeType = 
     | Exclusive
@@ -129,9 +129,9 @@ and RangeType =
     | ExclusiveStep of Expression
     | InclusiveStep of Expression
 
-and BinaryExpression =
-    | BinaryLogicalExpression of Expression * BinaryLogicalOperator * Expression
-    | BinaryComparisonExpression of Expression * BinaryComparisonOperator * Expression
+and BinaryExpr =
+    | BinaryLogicalExpr of Expression * BinaryLogicalOperator * Expression
+    | BinaryComparisonExpr of Expression * BinaryComparisonOperator * Expression
     | BinaryArithmeticOperator of Expression * BinaryArithmeticOperator * Expr
 
 and Literal = 

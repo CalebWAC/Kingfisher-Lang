@@ -29,8 +29,8 @@ let manyChars c = many c |>> charListToStr
 let many1Chars c = many1 c |>> charListToStr
 
 // Whitespace
-let whitespaceChar = satisfy Char.IsWhiteSpace "whitespace"
-let whitespace = many whitespaceChar
+let wsChar = satisfy Char.IsWhiteSpace "ws"
+let ws = many wsChar
 
 // Specific characters
 let parseLetter = ['a'..'z'] @ ['A'..'Z'] |> anyOf <?> "letter"
@@ -91,34 +91,51 @@ let boolLit =
 let runeLit = between (pchar '`') parseAlphanumeric (pchar '`') |>> RuneLiteral
 let voidLit = keyword "()"
 
-let literal  = intLit <|> floatLit <|> stringLit <|> boolLit <|> runeLit
-let explicitType = pchar ':' >>. whitespace >>.
+let literal  = intLit <|> floatLit <|> stringLit <|> boolLit <|> runeLit |>> LiteralExpr
+let explicitType = pchar ':' >>. ws >>.
                    (keyword "int" <|> keyword "float" <|> keyword "string" <|> keyword "bool" <|> keyword "rune") .>>
-                   whitespace .>>. opt (keyword "array" <|> keyword "set")
+                   ws .>>. opt (keyword "array" <|> keyword "set")
                    <?> "explicit type"
 
-let arrayLit = opt (keyword "set") .>> whitespace .>>. between (pchar '[')
-                 (sepBy1 literal (pchar ',' .>> whitespace))
+let arrayLit = opt (keyword "set") .>> ws .>>. between (pchar '[')
+                 (sepBy1 literal (pchar ',' .>> ws))
                  (pchar ']') <?> "array/set"
             
 let mapLit = between (pchar '[')
                 (sepBy1
-                    (literal .>> whitespace .>> pchar ':' .>> whitespace .>>. literal)
-                    (pchar ',' .>> whitespace))
+                    (literal .>> ws .>> pchar ':' .>> ws .>>. literal)
+                    (pchar ',' .>> ws))
                 (pchar ']') <?> "map"
                 
 let recordLit = between (pchar '{')
-                    (whitespace >>. opt (identifier .>> whitespace .>> keyword "with") .>> whitespace .>>.
-                     (sepBy1 (identifier .>> whitespace .>> pchar '=' .>> whitespace .>>. literal .>> whitespace) (pchar ',' .>> whitespace)))
+                    (ws >>. opt (identifier .>> ws .>> keyword "with") .>> ws .>>.
+                     (sepBy1 (identifier .>> ws .>> pchar '=' .>> ws .>>. literal .>> ws) (pchar ',' .>> ws)))
                     (pchar '}') <?> "record"
                     
 let tupleLit = between (pchar '(')
-                    (sepBy1 literal (pchar ',' .>> whitespace))
+                    (sepBy1 literal (pchar ',' .>> ws))
                     (pchar ')') <?> "tuple"
                     
 let range = intLit .>> keyword ".." .>>. opt (intLit .>> keyword "..") .>>. intLit
 
 
+//// Expressions \\\\
+let rec accessExpr () = literal <|>
+                        arrayExpr <|>
+                        dataAccessExpr <|>
+                        componentAccessExpr <|>
+                        (identifier |>> IdentifierExpr)
+
+and arrayExpr = identifier .>> ws .>>. between (pchar '[') (accessExpr()) (pchar ']') |>> ArrayExpr
+and dataAccessExpr = identifier .>> pchar '.' .>>. identifier |>> DataAccessExpr
+and componentAccessExpr = identifier .>> pchar '@' .>>. identifier |>> ComponentAccessExpr
+
+let funcExpr = accessExpr() .>> ws .>>. sepBy1 (accessExpr()) ws |>> FunctionCallExpr <|> accessExpr()
+let unaryExpr = (((pchar '!' <|> pchar '-') .>>. funcExpr) |>> UnaryExpr) <|> funcExpr
+
+
 //// Bindings \\\\
-let immutableBinding = keyword "let" >>. whitespace >>. identifier .>> whitespace .>>. opt explicitType .>> whitespace .>> keyword "=" .>> whitespace .>>. literal
-let mutableBinding = keyword "var" >>. whitespace >>. identifier .>> whitespace .>>. opt explicitType .>> whitespace .>> keyword "=" .>> whitespace .>>. literal
+let immutableBinding = keyword "let" >>. ws >>. identifier .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>>. unaryExpr
+let mutableBinding = keyword "var" >>. ws >>. identifier .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>>. unaryExpr
+let reassignment = identifier .>> ws .>> keyword "<-" .>> ws .>>. unaryExpr
+let entityBinding = keyword "ent" >>. ws >>. identifier .>> ws .>> pchar '=' .>> ws .>>. sepBy1 identifier ws

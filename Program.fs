@@ -1,7 +1,7 @@
 ﻿open ParserLibrary.Core
 open ParserLibrary.Std
 
-let input = "let var: float array = 18.9"
+let input = "let index = -Transform@entity"
 
 runString immutableBinding input
 |> printResult

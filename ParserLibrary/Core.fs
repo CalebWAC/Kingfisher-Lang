@@ -81,18 +81,21 @@ let (.>>.) = andThen
 
 // Matches one parser or the other
 let orElse p1 p2 =
-    let label = $"{p1.label} or else {p2.label}"
     let createParser input =
-        let result1 = run p1 input
+            let result1 = run p1 input
 
-        match result1 with
-        | Success result -> Success result
-        | Failure _ ->
-            let result2 = run p2 input
+            match result1 with
+            | Success result -> Success result
+            | Failure _ ->
+                let result2 = run p2 input
 
-            result2
-        
-    { parseFunc = createParser; label = label }
+                result2
+    
+    try
+        let label = $"{p1.label} or else {p2.label}"
+        { parseFunc = createParser; label = label }
+    with | _ -> { parseFunc = createParser; label = "Err" }
+    
 let (<|>) = orElse
 
 // Matches one of any given parser
