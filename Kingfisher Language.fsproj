@@ -9,6 +9,7 @@
     <Compile Include="ParserLibrary\InputState.fs" />
     <Compile Include="ParserLibrary\Core.fs" />
     <Compile Include="ParserLibrary\Std.fs" />
+    <Compile Include="SemanticAnalysis.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 </Project>

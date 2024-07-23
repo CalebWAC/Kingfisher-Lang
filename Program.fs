@@ -1,8 +1,14 @@
 ﻿open ParserLibrary.Core
 open ParserLibrary.Std
 
-// let element = arr[0]\n
-let input = "for i in arr do { 7 + 8\npop element }\n"
+let input =
+    "fun print e = { println 'The element is: ${e}' }
+     let arr = [0, 3, 5, 10]
+     for i in arr do { print arr[i] }"
 
-runString (statement()) input
+let ast = runString parseProgram input
+
+ast
 |> printResult
+
+SemanticAnalysis.analyzeBindings ast

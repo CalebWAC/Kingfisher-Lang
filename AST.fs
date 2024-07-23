@@ -24,7 +24,7 @@ and Reassignment = Identifier (* * BinaryArithmeticOperator option *) * Expr lis
 and Parameter =
     | Unspecified of Identifier
     | Specified of (Identifier option * Identifier) * Type option 
-and FunctionDeclaration = (Identifier * Parameter list) * Expr list
+and FunctionDeclaration = (Identifier * Parameter list) * Expression list
 
 and EntityBinding = Identifier * Identifier list
 and SystemDeclaration = (Identifier list * SystemClassification option) * Expr list // change
@@ -131,13 +131,11 @@ and Literal =
     | RuneLiteral of char
     | VoidLiteral
     | CollectionLiteral of CollectionLiteral
-    | RecordLiteral of Identifier list * Expression list
+    | RecordLiteral of string option * (Identifier * Expression) list
     | TupleLiteral of Expression list
 
 and CollectionLiteral =
-    | ArrayLiteral of ArrayType * Expr list
-    | MapLiteral of Expr list * Expr list
+    | ArrayLiteral of ArrayType * Expression list
+    | MapLiteral of (Expression * Expression) list
 
-and ArrayType = 
-    | Array
-    | Set
+and ArrayType = string option // change to array/set

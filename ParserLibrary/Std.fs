@@ -29,15 +29,18 @@ let charListToStr charList =
 let manyChars c = many c |>> charListToStr
 let many1Chars c = many1 c |>> charListToStr
 
+
 // Whitespace
 let wsChar = satisfy Char.IsWhiteSpace "ws"
 let ws = many wsChar <?> "whitespace"
 let ws1 = many1 wsChar <?> "whitespace"
 
+
 // Specific characters
 let parseLetter = ['a'..'z'] @ ['A'..'Z'] |> anyOf <?> "letter"
 let digit = satisfy Char.IsDigit "digit"
 let parseAlphanumeric = parseLetter <|> digit <?> "alphanumeric character"
+let parseAny = parseAlphanumeric <|> wsChar <|> anyOf [':'; '$'; '{'; '}'; '.'; '?'; '!'; '@'; '#'; '$'; '%'; '^'; '&'; '*'; '('; ')']
 let pquote = pchar '\'' <?> "quote"
 
 
@@ -50,7 +53,7 @@ let keyword str =
     |>> charListToStr
     <?> str
 
-let stringLit = between pquote (many parseAlphanumeric |>> charListToStr) pquote
+let stringLit = between pquote (many parseAny |>> charListToStr) pquote
                 |>> StringLiteral
                 <?> "string"
 
@@ -100,33 +103,35 @@ let boolLit =
 let runeLit = between (pchar '`') parseAlphanumeric (pchar '`') |>> RuneLiteral
 let voidLit = keyword "()"
 
-let literal  = floatLit <|> intLit <|> stringLit <|> boolLit <|> runeLit |>> LiteralExpr
 let explicitType = pchar ':' >>. ws >>.
                    (keyword "int" <|> keyword "float" <|> keyword "string" <|> keyword "bool" <|> keyword "rune") .>>
                    ws .>>. opt (keyword "array" <|> keyword "set")
                    |>> AST.Type
                    <?> "explicit type"
 
-let arrayLit = opt (keyword "set") .>> ws .>>. between (pchar '[')
-                 (sepBy1 literal (pchar ',' .>> ws))
-                 (pchar ']') <?> "array/set"
+let rec literal () = floatLit <|> intLit <|> stringLit <|> boolLit <|> runeLit <|>
+                     (arrayLit |>> CollectionLiteral) <|> (mapLit |>> CollectionLiteral) <|> recordLit <|> tupleLit |>> LiteralExpr
+
+and arrayLit = opt (keyword "set") .>> ws .>>. between (pchar '[')
+                 (sepBy1 (literal()) (pchar ',' .>> ws))
+                 (pchar ']') |>> ArrayLiteral <?> "array/set" 
             
-let mapLit = between (pchar '[')
+and mapLit = between (pchar '[')
                 (sepBy1
-                    (literal .>> ws .>> pchar ':' .>> ws .>>. literal)
+                    (literal() .>> ws .>> pchar ':' .>> ws .>>. literal())
                     (pchar ',' .>> ws))
-                (pchar ']') <?> "map"
+                (pchar ']') |>> MapLiteral <?> "map"
                 
-let recordLit = between (pchar '{')
+and recordLit = between (pchar '{')
                     (ws >>. opt (identifier .>> ws .>> keyword "with") .>> ws .>>.
-                     (sepBy1 (identifier .>> ws .>> pchar '=' .>> ws .>>. literal .>> ws) (pchar ',' .>> ws)))
-                    (pchar '}') <?> "record"
+                     (sepBy1 (identifier .>> ws .>> pchar '=' .>> ws .>>. literal() .>> ws) (pchar ',' .>> ws)))
+                    (pchar '}') |>> RecordLiteral <?> "record"
                     
-let tupleLit = between (pchar '(')
-                    (sepBy1 literal (pchar ',' .>> ws))
-                    (pchar ')') <?> "tuple"
+and tupleLit = between (pchar '(')
+                    (sepBy1 (literal()) (pchar ',' .>> ws))
+                    (pchar ')') |>> TupleLiteral <?> "tuple"
                     
-let range = intLit .>> keyword ".." .>>. opt (intLit .>> keyword "..") .>>. intLit <?> "range" 
+and range = intLit .>> keyword ".." .>>. opt (intLit .>> keyword "..") .>>. intLit <?> "range" 
 
 
 //// Operators \\\\
@@ -163,10 +168,10 @@ let binaryLogOp =
 let rec expr () = ((binaryCompExpr .>> ws .>>. binaryLogOp .>> ws .>>. binaryCompExpr) |>> BinaryLogicalExpr <|> binaryCompExpr) //<?> "expression"
 
 
-and arrayExpr = identifier .>> ws .>>. between (pchar '[') (literal <|> (identifier |>> IdentifierExpr)) (pchar ']') |>> ArrayExpr <?> "array access"
+and arrayExpr = identifier .>> ws .>>. between (pchar '[') (literal() <|> (identifier |>> IdentifierExpr)) (pchar ']') |>> ArrayExpr <?> "array access"
 and dataAccessExpr = identifier .>> pchar '.' .>>. identifier |>> DataAccessExpr <?> "data access"
 and componentAccessExpr = identifier .>> pchar '@' .>>. identifier |>> ComponentAccessExpr <?> "component access"
-and accessExpr = literal <|>
+and accessExpr = literal() <|>
                  arrayExpr <|>
                  dataAccessExpr <|>
                  componentAccessExpr <|>
@@ -190,8 +195,9 @@ and forExpr() = opt (identifier .>> pchar '@') .>> ws .>> keyword "for" .>> ws .
 and whileExpr = keyword "while" >>. ws >>. expr() .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (expr() .>> ws) .>> pchar '}' |>> WhileExpr <?> "while loop"
 and matchExpr = keyword "when" >>. ws >>. identifier .>> ws .>> keyword "is" .>> ws .>> pchar '{' .>> ws .>>. many1 (identifier .>> ws .>> keyword "->" .>> ws .>>. identifier .>> ws) .>> ws .>> pchar '}' |>> MatchExpr <?> "match"
 
-and expression = ifExpr <|> forExpr() <|> whileExpr <|> matchExpr <|> (expr() |>> Expression) //<?> "higher expression"
+and expression = ifExpr <|> forExpr() <|> whileExpr <|> matchExpr <|> (expr() |>> Expression) <?> "higher expression"
 and expressionFor = (ifExpr <|> whileExpr <|> matchExpr <|> (expr() |>> Expression) <|> forExpr()) |>> Statement.Expression
+
 
 //// Bindings \\\\
 and immutableBinding = keyword "let" >>. ws >>. identifier .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>>. many1 expression |>> ImmutableBinding
@@ -202,9 +208,9 @@ and entityBinding = keyword "ent" >>. ws >>. identifier .>> ws .>> pchar '=' .>>
 and systemBinding = keyword "sys" >>. ws >>. sepBy1 identifier ws .>> ws .>>. opt (pchar '|' >>. ws >>. identifier .>> ws) .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>. many1 expression .>> ws .>> pchar '}' |>> SystemDeclaration
 
 and parameter = (pchar '(' >>. ws >>. ((opt identifier .>> ws .>>. identifier) <|> (opt (keyword "~") .>>. identifier)) .>> ws .>>. opt explicitType .>> ws .>> pchar ')' |>> Specified) <|> (identifier |>> Unspecified) .>> ws <?> "parameter"
-and functionBinding = keyword "fun" >>. ws >>. identifier .>> ws .>>. many parameter .>> ws .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>. many1 expression .>> ws .>> pchar '}' |>> FunctionDeclaration
+and functionBinding = keyword "fun" >>. ws >>. identifier .>> ws .>>. many parameter .>> ws .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>. many1 (expr()) .>> ws .>> pchar '}' |>> FunctionDeclaration
 
 
-and binding = (immutableBinding <|> mutableBinding <|> reassignment <|> entityBinding <|> functionBinding <|> systemBinding) |>> Binding <?> "binding"
+and binding = (immutableBinding <|> mutableBinding <|> entityBinding <|> functionBinding <|> systemBinding <|> reassignment) |>> Binding <?> "binding"
 
-let parseProgram = sepBy1 (statement()) ws
+let parseProgram = ws >>. sepBy1 (statement()) ws
