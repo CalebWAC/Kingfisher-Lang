@@ -111,9 +111,9 @@ and IfCondition =
     | Expr of Expression
     | LetStatement of Identifier  * Expression
 
-and ForExpr = Identifier option * Identifier * Expr * Expression option * Statement list
-and WhileExpr = Expr * Statement list
-and MatchExpr = Expr * Expression list * Statement list
+and ForExpr = (((Identifier option * Identifier) * Expression) * Expression option) * Expression list // change to statement
+and WhileExpr = Expression * Expression list // change to statement
+and MatchExpr = Identifier * (Identifier * Identifier) list // change first two to expression, last to statement
 
 and Expression = 
     | BinaryLogicalExpr of (Expression * BinaryLogicalOperator) * Expression

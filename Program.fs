@@ -1,7 +1,8 @@
 ﻿open ParserLibrary.Core
 open ParserLibrary.Std
 
-let input = "let val = if 6 < 7 then { 7 + 9 } else { num }"
+// let input = "while i = 8 do i + 8"
+let input = "while 8 = i do { i + 8 }"
 
-runString immutableBinding input
+runString whileExpr input
 |> printResult

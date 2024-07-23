@@ -75,7 +75,7 @@ let andThen p1 p2 =
     p1 >>= (fun p1Result ->
     p2 >>= (fun p2Result ->
         returnP (p1Result, p2Result)))
-    <?> try $"{p1.label} and then {p2.label}" with | _ -> "err"
+    <?> $"{p1.label} and then {p2.label}"
     
 let (.>>.) = andThen
 
