@@ -19,9 +19,9 @@ and Binding =
     | SystemDeclaration of SystemDeclaration
     | Reassignment of Reassignment
 
-and ImmutableBinding = Identifier * Type option * Expr list
-and MutableBinding = Identifier * Type option * Expr list
-and Reassignment = Identifier * BinaryArithmeticOperator option * Expr list
+and ImmutableBinding = (Identifier * Type option) * Expr list
+and MutableBinding = (Identifier * Type option) * Expr list
+and Reassignment = Identifier (* * BinaryArithmeticOperator option *) * Expr list
 
 and Parameter = Identifier option * Identifier * Type option 
 and FunctionDeclaration = Identifier * Parameter list * Expr list
@@ -52,22 +52,11 @@ and UnionCase =
     | Single of Identifier
     | Multiple of Identifier * Type list
 
-and Type = TypeKeyWord of CollectionType option
+and Type = TypeKeyWord * CollectionType option
 
-and TypeKeyWord = 
-    | I8
-    | I16
-    | Int
-    | I64
-    | Float
-    | Float64
-    | String
-    | Bool
-    | Rune
+and TypeKeyWord = string // fix
 
-and CollectionType = 
-    | Array
-    | Set
+and CollectionType = string //fix
 
 and BinaryOperator =
     | BinaryArithmeticOperator of BinaryArithmeticOperator
@@ -121,7 +110,7 @@ and Expression =
     | BinaryArithmeticExpr of (Expression * BinaryArithmeticOperator) * Expression
     | UnaryExpr of UnaryOperator * Expression
     | IdentifierExpr of Identifier
-    | FunctionCallExpr of Expression * Expression list
+    | FunctionCallExpr of Identifier * Expression list
     | ArrayExpr of Identifier * Expression
     | DataAccessExpr of Identifier * Identifier
     | ComponentAccessExpr of Identifier * Identifier
