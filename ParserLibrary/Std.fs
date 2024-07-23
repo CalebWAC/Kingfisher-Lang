@@ -1,6 +1,7 @@
 // Higher-abstracted functions
 module ParserLibrary.Std
 
+open System.Reflection.Metadata
 open AST
 open Core
 open System
@@ -159,7 +160,7 @@ let binaryLogOp =
 
 
 //// Expressions \\\\
-let rec expr () = ((binaryCompExpr .>> ws .>>. binaryLogOp .>> ws .>>. binaryCompExpr) |>> BinaryLogicalExpr <|> binaryCompExpr) <?> "expression"
+let rec expr () = ((binaryCompExpr .>> ws .>>. binaryLogOp .>> ws .>>. binaryCompExpr) |>> BinaryLogicalExpr <|> binaryCompExpr) //<?> "expression"
 
 
 and arrayExpr = identifier .>> ws .>>. between (pchar '[') (literal <|> (identifier |>> IdentifierExpr)) (pchar ']') |>> ArrayExpr <?> "array access"
@@ -177,26 +178,33 @@ and binaryArithExpr = (unaryExpr .>> ws .>>. binaryArithOp .>> ws .>>. unaryExpr
 and binaryCompExpr = (binaryArithExpr .>> ws .>>. binaryCompOp .>> ws .>>. binaryArithExpr) |>> BinaryComparisonExpr <|> binaryArithExpr <?> "binaryComp expr"
 
 
-let rec statement () = expression |>> Statement.Expression <|> binding
+let rec statement () = (binding <|> (expression |>> Statement.Expression)) <?> "statement"
 
 
 //// Control Flow Expressions \\\\
 and ifCond = (expr() |>> IfCondition.Expr) <|> (keyword "let" >>. ws >>. identifier .>> ws .>> pchar '=' .>>. expr() |>> LetStatement)
 and ifExpress = ifCond .>> ws .>>. opt (keyword "where" >>. ws >>. expr()) .>> ws .>> keyword "then" .>> ws .>> keyword "{" .>> ws .>>. many1 (expr() .>> ws) .>> pchar '}' |>> IfExpress
-and ifExpr = keyword "if" >>. ws >>. ifExpress .>> ws .>>. opt(many1 (keyword "elif" >>. ifExpress)) .>> ws .>> keyword "else" .>> ws .>> pchar '{' .>> ws .>>. many1 (expr() .>> ws) .>> pchar '}' |>> IfExpr
+and ifExpr = keyword "if" >>. ws >>. ifExpress .>> ws .>>. opt(many1 (keyword "elif" >>. ifExpress)) .>> ws .>> keyword "else" .>> ws .>> pchar '{' .>> ws .>>. many1 (expr() .>> ws) .>> pchar '}' |>> IfExpr  <?> "if"
 
-and forExpr = opt (identifier .>> pchar '@') .>> ws .>> keyword "for" .>> ws .>>. identifier .>> ws .>> keyword "in" .>> ws .>>. expr() .>> ws .>>. opt (keyword "where" >>. ws >>. expr()) .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (expr() .>> ws) .>> pchar '}' |>> ForExpr
-and whileExpr = keyword "while" >>. ws >>. expr() .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (expr() .>> ws) .>> pchar '}' |>> WhileExpr
-and matchExpr = keyword "when" >>. ws >>. identifier .>> ws .>> keyword "is" .>> ws .>> pchar '{' .>> ws .>>. many1 (identifier .>> ws .>> keyword "->" .>> ws .>>. identifier .>> ws) .>> ws .>> pchar '}' |>> MatchExpr
+and forExpr() = opt (identifier .>> pchar '@') .>> ws .>> keyword "for" .>> ws .>>. identifier .>> ws .>> keyword "in" .>> ws .>>. expr() .>> ws .>>. opt (keyword "where" >>. ws >>. expr()) .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (expr() .>> ws) .>> pchar '}' |>> ForExpr <?> "for loop"
+and whileExpr = keyword "while" >>. ws >>. expr() .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (expr() .>> ws) .>> pchar '}' |>> WhileExpr <?> "while loop"
+and matchExpr = keyword "when" >>. ws >>. identifier .>> ws .>> keyword "is" .>> ws .>> pchar '{' .>> ws .>>. many1 (identifier .>> ws .>> keyword "->" .>> ws .>>. identifier .>> ws) .>> ws .>> pchar '}' |>> MatchExpr <?> "match"
 
-and expression = ifExpr <|> forExpr <|> whileExpr <|> matchExpr <|> (expr() |>> Expression)
+and expression = ifExpr <|> forExpr() <|> whileExpr <|> matchExpr <|> (expr() |>> Expression) //<?> "higher expression"
+and expressionFor = (ifExpr <|> whileExpr <|> matchExpr <|> (expr() |>> Expression) <|> forExpr()) |>> Statement.Expression
 
 //// Bindings \\\\
 and immutableBinding = keyword "let" >>. ws >>. identifier .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>>. many1 expression |>> ImmutableBinding
 and mutableBinding = keyword "var" >>. ws >>. identifier .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>>. many1 expression |>> MutableBinding
 and reassignment = identifier .>> ws .>> keyword "<-" .>> ws .>>. many1 expression |>> Reassignment
+
 and entityBinding = keyword "ent" >>. ws >>. identifier .>> ws .>> pchar '=' .>> ws .>>. sepBy1 identifier ws1 |>> EntityBinding
+and systemBinding = keyword "sys" >>. ws >>. sepBy1 identifier ws .>> ws .>>. opt (pchar '|' >>. ws >>. identifier .>> ws) .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>. many1 expression .>> ws .>> pchar '}' |>> SystemDeclaration
 
-// and functionBinding = keyword "fun" >>. ws >>. identifier .>> ws .>> pchar '=' .>> ws .>> pchar '{' .>>. many1 (expr()) .>> pchar '}'
+and parameter = (pchar '(' >>. ws >>. ((opt identifier .>> ws .>>. identifier) <|> (opt (keyword "~") .>>. identifier)) .>> ws .>>. opt explicitType .>> ws .>> pchar ')' |>> Specified) <|> (identifier |>> Unspecified) .>> ws <?> "parameter"
+and functionBinding = keyword "fun" >>. ws >>. identifier .>> ws .>>. many parameter .>> ws .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>. many1 expression .>> ws .>> pchar '}' |>> FunctionDeclaration
 
-and binding = (immutableBinding <|> mutableBinding <|> reassignment <|> entityBinding) |>> Binding
+
+and binding = (immutableBinding <|> mutableBinding <|> reassignment <|> entityBinding <|> functionBinding <|> systemBinding) |>> Binding <?> "binding"
+
+let parseProgram = sepBy1 (statement()) ws

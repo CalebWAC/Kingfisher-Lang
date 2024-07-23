@@ -172,5 +172,6 @@ let sepBy1 p sep =
     let sepThenP = sep >>. p
     p .>>. many sepThenP
     |>> fun (p, pList) -> p::pList
+    <?> "separator"
 let sepBy p sep =
     sepBy1 p sep <|> returnP []

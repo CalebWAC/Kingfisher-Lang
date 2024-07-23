@@ -1,7 +1,5 @@
 module AST
 
-open System.Linq.Expressions 
-
 type Program = Statement list
 
 and Statement = 
@@ -23,17 +21,19 @@ and ImmutableBinding = (Identifier * Type option) * Expr list
 and MutableBinding = (Identifier * Type option) * Expr list
 and Reassignment = Identifier (* * BinaryArithmeticOperator option *) * Expr list
 
-and Parameter = Identifier option * Identifier * Type option 
-and FunctionDeclaration = Identifier * Parameter list * Expr list
+and Parameter =
+    | Unspecified of Identifier
+    | Specified of (Identifier option * Identifier) * Type option 
+and FunctionDeclaration = (Identifier * Parameter list) * Expr list
 
 and EntityBinding = Identifier * Identifier list
-and SystemDeclaration = Identifier list * SystemClassification * Expr list
+and SystemDeclaration = (Identifier list * SystemClassification option) * Expr list // change
 
-and SystemClassification = 
-    | Awake
+and SystemClassification = string // change
+    (* | Awake
     | Start
     | Update 
-    | End
+    | End *)
 
 and TypeDeclaration =
     | RecordDeclaration of RecordDeclaration
