@@ -24,7 +24,7 @@ and Reassignment = Identifier (* * BinaryArithmeticOperator option *) * Expr lis
 and Parameter =
     | Unspecified of Identifier
     | Specified of (Identifier option * Identifier) * Type option 
-and FunctionDeclaration = (Identifier * Parameter list) * Expression list
+and FunctionDeclaration = ((Identifier * Parameter list) * Type option) * Expression list
 
 and EntityBinding = Identifier * Identifier list
 and SystemDeclaration = (Identifier list * SystemClassification option) * Expr list // change

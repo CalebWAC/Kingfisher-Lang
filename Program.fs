@@ -3,8 +3,8 @@ open ParserLibrary.Std
 
 let input =
     "fun print e = { println 'The element is: ${e}' }
-     let arr = [0, 3, 5, 10]
-     for i in arr do { print arr[i] }"
+     for i in arr do { nonExistentVariable }
+     let arr = invalid"
 
 let ast = runString parseProgram input
 

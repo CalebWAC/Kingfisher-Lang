@@ -208,7 +208,7 @@ and entityBinding = keyword "ent" >>. ws >>. identifier .>> ws .>> pchar '=' .>>
 and systemBinding = keyword "sys" >>. ws >>. sepBy1 identifier ws .>> ws .>>. opt (pchar '|' >>. ws >>. identifier .>> ws) .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>. many1 expression .>> ws .>> pchar '}' |>> SystemDeclaration
 
 and parameter = (pchar '(' >>. ws >>. ((opt identifier .>> ws .>>. identifier) <|> (opt (keyword "~") .>>. identifier)) .>> ws .>>. opt explicitType .>> ws .>> pchar ')' |>> Specified) <|> (identifier |>> Unspecified) .>> ws <?> "parameter"
-and functionBinding = keyword "fun" >>. ws >>. identifier .>> ws .>>. many parameter .>> ws .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>. many1 (expr()) .>> ws .>> pchar '}' |>> FunctionDeclaration
+and functionBinding = keyword "fun" >>. ws >>. identifier .>> ws .>>. many parameter .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>. many1 (expr()) .>> ws .>> pchar '}' |>> FunctionDeclaration
 
 
 and binding = (immutableBinding <|> mutableBinding <|> entityBinding <|> functionBinding <|> systemBinding <|> reassignment) |>> Binding <?> "binding"
