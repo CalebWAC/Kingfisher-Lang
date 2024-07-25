@@ -189,19 +189,18 @@ let rec statement () = (binding <|> (expression |>> Statement.Expression)) <?> "
 
 
 //// Control Flow Expressions \\\\
+and expressionFor() = (expr() |>> Expression) <|> ifExpr() <|> whileExpr() <|> matchExpr() |>> Statement.Expression //<|> forExpr()
+and expressionWhile() = (expr() |>> Expression) // <|> ifExpr() <|> forExpr() <|> matchExpr()  // <|> whileExpr()
+and expressionIf() = (expr() |>> Expression) // <|> forExpr() <|> whileExpr() <|> matchExpr() // <|> ifExpr()
+and expressionMatch() = (expr() |>> Expression) // <|> ifExpr() <|> forExpr() <|> whileExpr() // <|> matchExpr()
+
 and ifCond = (expr() |>> IfCondition.Expr) <|> (keyword "let" >>. ws >>. identifier .>> ws .>> pchar '=' .>>. expr() |>> LetStatement)
-and ifExpress() = ifCond .>> ws .>>. opt (keyword "where" >>. ws >>. expr()) .>> ws .>> keyword "then" .>> ws .>> keyword "{" .>> ws .>>. many1 (expressionIf .>> ws) .>> pchar '}' |>> IfExpress
-and ifExpr() = keyword "if" >>. ws >>. ifExpress() .>> ws .>>. opt(many1 (keyword "elif" >>. ifExpress())) .>> ws .>>. opt (keyword "else" >>. ws >>. pchar '{' >>. ws >>. many1 (expressionIf .>> ws) .>> pchar '}') |>> IfExpr  <?> "if"
+and ifExpress() = ifCond .>> ws .>>. opt (keyword "where" >>. ws >>. expr()) .>> ws .>> keyword "then" .>> ws .>> keyword "{" .>> ws .>>. many1 (expr() .>> ws) .>> pchar '}' |>> IfExpress
+and ifExpr() = keyword "if" >>. ws >>. ifExpress() .>> ws .>>. opt(many1 (keyword "elif" >>. ifExpress())) .>> ws .>>. opt (keyword "else" >>. ws >>. pchar '{' >>. ws >>. many1 (expr() .>> ws) .>> pchar '}') |>> IfExpr  <?> "if"
 
-
-and forExpr() = opt (identifier .>> pchar '@') .>> ws .>> keyword "for" .>> ws .>>. identifier .>> ws .>> keyword "in" .>> ws .>>. expr() .>> ws .>>. opt (keyword "where" >>. ws >>. expr()) .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (expressionFor .>> ws) .>> pchar '}' |>> ForExpr <?> "for loop"
-and whileExpr() = keyword "while" >>. ws >>. expr() .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (expressionWhile .>> ws) .>> pchar '}' |>> WhileExpr <?> "while loop"
-and matchExpr() = keyword "when" >>. ws >>. identifier .>> ws .>> keyword "is" .>> ws .>> pchar '{' .>> ws .>>. many1 (identifier .>> ws .>> keyword "->" .>> ws .>>. expressionMatch .>> ws) .>> ws .>> pchar '}' |>> MatchExpr <?> "match"
-
-and expressionFor = ifExpr() <|> whileExpr() <|> matchExpr() <|> (expr() |>> Expression) //<|> forExpr()
-and expressionIf = forExpr() <|> whileExpr() <|> matchExpr() <|> (expr() |>> Expression) // <|> ifExpr()
-and expressionWhile = ifExpr() <|> forExpr() <|> matchExpr() <|> (expr() |>> Expression) // <|> whileExpr()
-and expressionMatch = ifExpr() <|> forExpr() <|> whileExpr() <|> (expr() |>> Expression) // <|> matchExpr()
+and forExpr() = opt (identifier .>> pchar '@') .>> ws .>> keyword "for" .>> ws .>>. identifier .>> ws .>> keyword "in" .>> ws .>>. expr() .>> ws .>>. opt (keyword "where" >>. ws >>. expr()) .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (expressionFor() .>> ws) .>> pchar '}' |>> ForExpr <?> "for loop"
+and whileExpr() = keyword "while" >>. ws >>. expr() .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (expressionWhile() .>> ws) .>> pchar '}' |>> WhileExpr <?> "while loop"
+and matchExpr() = keyword "when" >>. ws >>. identifier .>> ws .>> keyword "is" .>> ws .>> pchar '{' .>> ws .>>. many1 (identifier .>> ws .>> keyword "->" .>> ws .>>. expressionMatch() .>> ws) .>> ws .>> pchar '}' |>> MatchExpr <?> "match"
 
 and expression = ifExpr() <|> forExpr() <|> whileExpr() <|> matchExpr() <|> (expr() |>> Expression) <?> "higher expression"
 
@@ -217,7 +216,7 @@ and systemBinding = keyword "sys" >>. ws >>. sepBy1 identifier ws .>> ws .>>. op
 and parameter = (pchar '(' >>. ws >>. ((opt identifier .>> ws .>>. identifier) <|> (opt (keyword "~") .>>. identifier)) .>> ws .>>. opt explicitType .>> ws .>> pchar ')' |>> Specified) <|> (identifier |>> Unspecified) .>> ws <?> "parameter"
 and functionBinding = keyword "fun" >>. ws >>. identifier .>> ws .>>. many parameter .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>. many1 (expr()) .>> ws .>> pchar '}' |>> FunctionDeclaration
 
-
 and binding = (immutableBinding <|> mutableBinding <|> entityBinding <|> functionBinding <|> systemBinding <|> reassignment) |>> Binding <?> "binding"
+
 
 let parseProgram = ws >>. sepBy1 (statement()) ws

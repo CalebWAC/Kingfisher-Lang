@@ -94,13 +94,13 @@ and Expr =
     | MatchExpr of MatchExpr
     | Expression of Expression
 
-and IfExpr = (IfExpress * IfExpress list option) * Expr list option  // change Expression to statement
-and IfExpress = (IfCondition * Expression option) * Expr list // change!
+and IfExpr = (IfExpress * IfExpress list option) * Expression list option  // change Expression to statement
+and IfExpress = (IfCondition * Expression option) * Expression list // change!
 and IfCondition =
     | Expr of Expression
     | LetStatement of Identifier  * Expression
 
-and ForExpr = (((Identifier option * Identifier) * Expression) * Expression option) * Expr list // change to statement
+and ForExpr = (((Identifier option * Identifier) * Expression) * Expression option) * Statement list
 and WhileExpr = Expression * Expr list // change to statement
 and MatchExpr = Identifier * (Identifier * Expr) list // change first two to expression, last to statement
 
