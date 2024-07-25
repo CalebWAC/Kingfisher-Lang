@@ -54,9 +54,18 @@ and UnionCase =
 
 and Type = TypeKeyWord * CollectionType option
 
-and TypeKeyWord = string // fix
+and TypeKeyWord =
+    | Float
+    | Int
+    | Bool
+    | String
+    | Rune
+    | Void
+    | Map
 
-and CollectionType = string //fix
+and CollectionType =
+    | Array
+    | Set
 
 and BinaryOperator =
     | BinaryArithmeticOperator of BinaryArithmeticOperator
@@ -135,7 +144,5 @@ and Literal =
     | TupleLiteral of Expression list
 
 and CollectionLiteral =
-    | ArrayLiteral of ArrayType * Expression list
+    | ArrayLiteral of CollectionType * Expression list
     | MapLiteral of (Expression * Expression) list
-
-and ArrayType = string option // change to array/set

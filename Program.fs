@@ -2,10 +2,9 @@
 open ParserLibrary.Std
 
 let input =
-    "let arr = [1, 2, 3, 4, 5]
-     for i in arr do {
-        if i % 2 = 0 then { println '${i}' }
-     }"
+    "let num1 : int = 5
+     let num2 : int = 7
+     num1 + num2 = 5 && true"
 
 let ast = runString parseProgram input
 

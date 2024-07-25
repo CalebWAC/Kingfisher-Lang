@@ -108,15 +108,26 @@ let voidLit = keyword "()"
 let explicitType = pchar ':' >>. ws >>.
                    (keyword "int" <|> keyword "float" <|> keyword "string" <|> keyword "bool" <|> keyword "rune") .>>
                    ws .>>. opt (keyword "array" <|> keyword "set")
-                   |>> AST.Type
+                   |>> fun (str, optCol) ->
+                           let typeKey = match str with
+                                         | "int" -> Int
+                                         | "float" -> Float
+                                         | "string" -> TypeKeyWord.String
+                                         | "bool" -> Bool
+                                         | _ -> Rune
+                           let colType = match optCol with
+                                         | Some col -> if col = "array" then Some CollectionType.Array else Some Set
+                                         | None -> None
+                           AST.Type (typeKey, colType)
                    <?> "explicit type"
 
 let rec literal () = floatLit <|> intLit <|> stringLit <|> boolLit <|> runeLit <|>
                      (arrayLit |>> CollectionLiteral) <|> (mapLit |>> CollectionLiteral) <|> recordLit <|> tupleLit |>> LiteralExpr
 
 and arrayLit = opt (keyword "set") .>> ws .>>. between (pchar '[')
-                 (sepBy1 (literal()) (pchar ',' .>> ws))
-                 (pchar ']') |>> ArrayLiteral <?> "array/set" 
+                 (sepBy1 (literal()) (pchar ',' .>> ws)) (pchar ']')
+                 |>> fun (strOpt, col) -> if strOpt.IsSome then ArrayLiteral(Set, col) else ArrayLiteral(CollectionType.Array, col)
+                 <?> "array/set" 
             
 and mapLit = between (pchar '[')
                 (sepBy1
