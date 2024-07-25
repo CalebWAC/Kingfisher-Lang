@@ -2,9 +2,10 @@
 open ParserLibrary.Std
 
 let input =
-    "fun print e = { println 'The element is: ${e}' }
-     for i in arr do { nonExistentVariable }
-     let arr = invalid"
+    "let arr = [1, 2, 3, 4, 5]
+     for i in arr do {
+        if i % 2 = 0 then { println '${i}' }
+     }"
 
 let ast = runString parseProgram input
 

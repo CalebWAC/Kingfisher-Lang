@@ -17,9 +17,9 @@ and Binding =
     | SystemDeclaration of SystemDeclaration
     | Reassignment of Reassignment
 
-and ImmutableBinding = (Identifier * Type option) * Expr list
-and MutableBinding = (Identifier * Type option) * Expr list
-and Reassignment = Identifier (* * BinaryArithmeticOperator option *) * Expr list
+and ImmutableBinding = (Identifier * Type option) * Expression
+and MutableBinding = (Identifier * Type option) * Expression
+and Reassignment = Identifier (* * BinaryArithmeticOperator option *) * Expression
 
 and Parameter =
     | Unspecified of Identifier
@@ -94,15 +94,15 @@ and Expr =
     | MatchExpr of MatchExpr
     | Expression of Expression
 
-and IfExpr = (IfExpress * IfExpress list option) * Expression list  // change Expression to statement
-and IfExpress = (IfCondition * Expression option) * Expression list // change!
+and IfExpr = (IfExpress * IfExpress list option) * Expr list option  // change Expression to statement
+and IfExpress = (IfCondition * Expression option) * Expr list // change!
 and IfCondition =
     | Expr of Expression
     | LetStatement of Identifier  * Expression
 
-and ForExpr = (((Identifier option * Identifier) * Expression) * Expression option) * Expression list // change to statement
-and WhileExpr = Expression * Expression list // change to statement
-and MatchExpr = Identifier * (Identifier * Identifier) list // change first two to expression, last to statement
+and ForExpr = (((Identifier option * Identifier) * Expression) * Expression option) * Expr list // change to statement
+and WhileExpr = Expression * Expr list // change to statement
+and MatchExpr = Identifier * (Identifier * Expr) list // change first two to expression, last to statement
 
 and Expression = 
     | BinaryLogicalExpr of (Expression * BinaryLogicalOperator) * Expression

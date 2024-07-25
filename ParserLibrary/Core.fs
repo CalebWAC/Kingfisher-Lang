@@ -1,7 +1,6 @@
 // Core functions for parser composition
 module ParserLibrary.Core
 
-open System
 open ParserLibrary.InputState
 
 type ParserLabel = string

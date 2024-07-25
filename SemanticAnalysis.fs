@@ -20,12 +20,11 @@ let rec traverse expr =
         | ComponentAccessExpr (iden, _) -> if variables.ContainsKey(iden) |> not then printfn $"{iden} does not exist"
         | _ -> ()
 
-let validateBindings exprs =      
-    for expr in exprs do
-       match expr with
-       | Expression e ->
-            traverse e
-       | _ ->()
+let validateBindings expr =      
+    match expr with
+    | Expression e ->
+        traverse e
+    | _ ->()
 
 let analyzeBindings (ast : ParseResult<'a>) =
     match ast with
@@ -35,10 +34,13 @@ let analyzeBindings (ast : ParseResult<'a>) =
             | Binding bind ->
                 match bind with
                 | ImmutableBinding immut ->
+                    snd immut |> traverse
                     variables.Add(fst (fst immut), snd (fst immut))
-                    snd immut |> validateBindings
-                | MutableBinding mut -> variables.Add(fst (fst mut), snd (fst mut))
+                | MutableBinding mut ->
+                    snd mut |> traverse
+                    variables.Add(fst (fst mut), snd (fst mut))
                 | FunctionDeclaration func ->
+                    for e in snd func do traverse e
                     let param = seq { for x in snd (fst (fst func)) do
                                          match x with
                                          | Unspecified iden ->
@@ -49,13 +51,38 @@ let analyzeBindings (ast : ParseResult<'a>) =
                                              yield typOpt
                                 }
                     functions.Add(fst (fst (fst func)), (Seq.toList param, (snd (fst func))))
-                | Reassignment res -> ()
+                | Reassignment res ->
+                    if variables.ContainsKey(fst res) |> not then printfn $"{fst res} does not exist"
+                    snd res |> traverse
                 | EntityBinding ent -> ()
                 | SystemDeclaration sys -> ()
             | Statement.Expression expr ->
                 match expr with
-                | ForExpr (((_, _), _), exprs) -> for e in exprs do traverse e
-                | _ -> ()
+                | ForExpr (((_, _), _), exprs) -> for e in exprs do validateBindings e
+                | WhileExpr (expr, exprs) ->
+                    traverse expr
+                    for e in exprs do validateBindings e
+                | IfExpr ((e, el), els) ->
+                    let evalIf ifExpr =
+                        match fst (fst ifExpr) with
+                        | Expr ex -> traverse ex
+                        | LetStatement (iden, expr) ->
+                            traverse expr
+                            variables.Add(iden, None)
+                        for expr in snd ifExpr do validateBindings expr
+                    
+                    evalIf e
+                    match el with
+                    | Some el -> for elifExpr in el do evalIf elifExpr
+                    | None -> ()
+                    
+                    match els with
+                    | Some els -> for elsIf in els do validateBindings elsIf
+                    | None -> ()
+                | MatchExpr (_, cases) ->
+                    for case in cases do
+                        snd case |> validateBindings
+                | Expression e -> traverse e
             | TypeDeclaration decl -> ()
     | Failure _ -> ()
     
