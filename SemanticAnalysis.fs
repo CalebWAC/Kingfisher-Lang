@@ -1,11 +1,12 @@
 module SemanticAnalysis
 
+open System.Runtime.Intrinsics.Arm
 open AST
 open ParserLibrary.Core
 open System.Collections.Generic
 
 let variables = Dictionary<string, Type option>()
-let functions = Dictionary<string, Type option list * Type option>()
+let functions = Dictionary<string, Type option list * Type>()
 
 let rec traverse expr =
         match expr with
@@ -18,7 +19,7 @@ let rec traverse expr =
         | BinaryComparisonExpr (e1, e2) ->
             let t1 = traverse (fst e1)
             let t2 = traverse e2
-            if fst t1 && fst t2 && snd t1 = snd t2  then
+            if fst t1 && fst t2 && snd t1 = snd t2 then
                 (true, Type(Bool, None))
             else (false, Type(Void, None))
         | BinaryArithmeticExpr (e1, e2) ->
@@ -32,10 +33,14 @@ let rec traverse expr =
             if variables.ContainsKey(iden) |> not then
                 printfn $"{iden} does not exist"; (false, Type(Void, None))
             else (true, variables[iden].Value)
-        | FunctionCallExpr (iden, _) ->
+        | FunctionCallExpr (iden, exprs) ->
             if functions.ContainsKey(iden) |> not then
                 printfn $"{iden} does not exist"; (false, Type(Void, None))
-            else (true, (snd functions[iden]).Value)
+            else
+                let callValid = exprs 
+                                |> List.forall (fun expr ->
+                                    snd (traverse expr) = ((fst(functions[iden]))[exprs |> List.findIndex (fun e -> e = expr)]).Value)
+                (callValid, (snd functions[iden]))
         | ArrayExpr (iden, _) ->
             if variables.ContainsKey(iden) |> not then
                 printfn $"{iden} does not exist"; (false, Type(Void, None))
@@ -73,13 +78,12 @@ let rec validateStatement statement =
     | Binding bind ->
         match bind with
         | ImmutableBinding immut ->
-            snd immut |> traverse |> ignore
-            variables.Add(fst (fst immut), snd (fst immut))
+            let valid, typ = snd immut |> traverse
+            if valid then variables.Add(fst (fst immut), Some typ)
         | MutableBinding mut ->
-            snd mut |> traverse |> ignore
-            variables.Add(fst (fst mut), snd (fst mut))
+            let valid, typ = snd mut |> traverse
+            if valid then variables.Add(fst (fst mut), Some typ)
         | FunctionDeclaration func ->
-            for e in snd func do traverse e |> ignore
             let param = seq { for x in snd (fst (fst func)) do
                                  match x with
                                  | Unspecified iden ->
@@ -88,8 +92,19 @@ let rec validateStatement statement =
                                  | Specified ((_, iden), typOpt) ->
                                      variables.Add(iden, typOpt)
                                      yield typOpt
-                        }
-            functions.Add(fst (fst (fst func)), (Seq.toList param, (snd (fst func))))
+                        } |> List.ofSeq
+            for e in snd func do traverse e |> ignore
+            let retType = match snd (fst func) with
+                          | Some ret -> ret
+                          | None -> (snd func)[(snd func).Length - 1] |> traverse |> snd
+            
+            functions.Add(fst (fst (fst func)), (Seq.toList param, retType))
+            for x in snd(fst (fst func)) do
+                match x with
+                | Unspecified iden ->
+                    variables.Remove(iden) |> ignore
+                | Specified ((_, iden), _) ->
+                    variables.Remove(iden) |> ignore
         | Reassignment res ->
             if variables.ContainsKey(fst res) |> not then printfn $"{fst res} does not exist"
             snd res |> traverse |> ignore
