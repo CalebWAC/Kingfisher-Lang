@@ -5,7 +5,9 @@ open ParserLibrary.Core
 open System.Collections.Generic
 
 let variables = Dictionary<string, Type option>()
+
 let functions = Dictionary<string, Type option list * Type>()
+functions.Add ("println", ([Some(String, None)], (Void, None)))
 
 let rec traverse expr =
         match expr with

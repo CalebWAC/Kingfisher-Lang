@@ -15,13 +15,7 @@ let main loc =
     SemanticAnalysis.analyze ast
     CodeGeneration.generate ast
     
-    0
+    printfn "\n\n\n\n"
+    System.Diagnostics.Process.Start("cmd.exe", "/C haxe --main Main.hx --interp") |> ignore
     
-(* 
-fun add (a: int) (b : int) = 
-    { a + b }
-
-let num1 = 5
-let num2 = 6
-let num3 = add num1 num2
-*)
+    0
