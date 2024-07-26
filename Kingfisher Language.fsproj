@@ -10,6 +10,8 @@
     <Compile Include="ParserLibrary\Core.fs" />
     <Compile Include="ParserLibrary\Std.fs" />
     <Compile Include="SemanticAnalysis.fs" />
+    <Compile Include="CodeGeneration.fs" />
     <Compile Include="Program.fs" />
+    <Content Include="Program.kf" />
   </ItemGroup>
 </Project>

@@ -1,6 +1,5 @@
 module SemanticAnalysis
 
-open System.Runtime.Intrinsics.Arm
 open AST
 open ParserLibrary.Core
 open System.Collections.Generic
@@ -84,7 +83,7 @@ let rec validateStatement statement =
             let valid, typ = snd mut |> traverse
             if valid then variables.Add(fst (fst mut), Some typ)
         | FunctionDeclaration func ->
-            let param = seq { for x in snd (fst (fst func)) do
+            let param = [ for x in snd (fst (fst func)) do
                                  match x with
                                  | Unspecified iden ->
                                      variables.Add(iden, None)
@@ -92,7 +91,7 @@ let rec validateStatement statement =
                                  | Specified ((_, iden), typOpt) ->
                                      variables.Add(iden, typOpt)
                                      yield typOpt
-                        } |> List.ofSeq
+                        ]
             for e in snd func do traverse e |> ignore
             let retType = match snd (fst func) with
                           | Some ret -> ret
@@ -139,10 +138,10 @@ let rec validateStatement statement =
         | MatchExpr (_, cases) ->
             for case in cases do
                 snd case |> validateBindings |> ignore
-        | Expression e -> printfn $"{traverse e}"
+        | Expression e -> traverse e |> ignore
     | TypeDeclaration decl -> ()
 
-let analyzeBindings (ast : ParseResult<'a>) =
+let analyze ast =
     match ast with
     | Success (a, _) ->
         for statement in a do
