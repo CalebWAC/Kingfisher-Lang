@@ -113,8 +113,8 @@ let rec validateStatement statement =
         | SystemDeclaration sys -> ()
     | Statement.Expression expr ->
         match expr with
-        | ForExpr ((((_, iden), _), _), exprs) ->
-            variables.Add(iden, None)
+        | ForExpr ((((_, iden), e), _), exprs) ->
+            variables.Add(iden, snd(traverse e) |> Some)
             for e in exprs do validateStatement e
             variables.Remove(iden) |> ignore
         | WhileExpr (expr, exprs) ->
@@ -150,6 +150,6 @@ let analyze ast =
             validateStatement statement
     | Failure _ -> ()
     
-    for i in variables do printf $"{i}\t"
-    printfn ""
-    for i in functions do printf $"{i}\t"
+    //for i in variables do printf $"{i}\t"
+    //printfn ""
+    //for i in functions do printf $"{i}\t"
