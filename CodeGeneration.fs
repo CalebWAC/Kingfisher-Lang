@@ -66,6 +66,12 @@ let rec generateExpr expr =
         generateExpr expr
         output.Write("]")
     | DataAccessExpr (iden1, iden2) -> output.Write($"{iden1}.{iden2}")
+    | RangeExpr ((expr1, opType), expr2) ->
+        generateExpr expr1
+        output.Write("...")
+        generateExpr expr2
+        
+        if opType = Inclusive then output.Write(" + 1")
     | LiteralExpr lit ->
         match lit with
         | IntLiteral i -> output.Write(i)
@@ -80,7 +86,7 @@ let rec generateExpr expr =
                 output.Write("[")
                 for expr in exprs do
                     generateExpr expr
-                    if List.findIndex (fun e -> e = expr) exprs <> exprs.Length - 1 then output.Write(",")
+                    if List.findIndex (fun e -> e = expr) exprs <> exprs.Length - 1 then output.Write(", ")
                 output.Write("]")
             | MapLiteral exprs ->
                 output.Write("[")
@@ -88,7 +94,7 @@ let rec generateExpr expr =
                     generateExpr key
                     output.Write(" => ")
                     generateExpr value
-                    if List.findIndex (fun e -> (key, value) = e) exprs <> exprs.Length - 1 then output.Write(",")
+                    if List.findIndex (fun e -> (key, value) = e) exprs <> exprs.Length - 1 then output.Write(", ")
                 output.Write("]")
         | RecordLiteral(_, values) ->
             output.Write("{")
@@ -181,16 +187,41 @@ let rec generateStatement stat =
             for case in cases do
                 output.Write($"case {fst case}: ")
                 generateStatement (snd case)
-                output.WriteLine("; break;")
             output.WriteLine("}")
         | Expression expression ->
             generateExpr expression
             output.WriteLine(";")
-    | TypeDeclaration _ -> ()
+    | _ -> ()
+
+let generateType statement =
+    match statement with
+    | TypeDeclaration decl ->
+        match decl with
+        | RecordDeclaration tuple -> failwith "todo"
+        | UnionDeclaration (iden, cases) ->
+            output.WriteLine($"enum {iden} " + "{")
+            
+            for case in cases do
+                match case with
+                | Single iden -> output.WriteLine($"{iden};")
+                | Multiple(iden, types) ->
+                    output.Write($"{iden}(")
+                    for t in types do
+                        output.Write($"_: {fst t}")
+                        if List.findIndex (fun ty -> ty = t) types <> types.Length - 1 then output.Write(", ")
+                    output.WriteLine(");")
+            output.WriteLine("}\n")
+        | ComponentDeclaration tuple -> failwith "todo"
+        | TypeAlias tuple -> failwith "todo"
+        | Extension tuple -> failwith "todo"
+    | _ -> ()
 
 let generate code =
     match code with
     | Success (ast, _) ->
+        for statement in ast do
+            generateType statement
+        
         output.WriteLine("class Main {")
         output.WriteLine(standardLibrary)
         output.WriteLine("\tpublic static function main() {")

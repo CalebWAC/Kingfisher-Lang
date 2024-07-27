@@ -1,5 +1,19 @@
-let arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+type Card =
+    | King
+    | Queen
+    | Jack
+    
+let arr = [1, 3, 3, 5, 23, -4, 0, 3, 1, 10]
 
-for e in 0..10 do {
+for i in 0..10 do {
+    let e = arr[i] 
     println e
+}
+
+let card = Jack
+
+when card is {
+    King -> println 'It is a king'
+    Queen -> println 'It is a queen'
+    Jack -> println 'It is a jack'
 }

@@ -36,6 +36,7 @@ let many1Chars c = many1 c |>> charListToStr
 let wsChar = satisfy Char.IsWhiteSpace "ws"
 let ws = many wsChar <?> "whitespace"
 let ws1 = many1 wsChar <?> "whitespace"
+let ws1NoNl = many1 (satisfy (fun c -> c = ' ' || c = '\t') "ws")
 
 
 // Specific characters
@@ -118,8 +119,7 @@ let range = intLit .>>. (keyword ".." <|> keyword "...") .>>. opt (intLit .>>. (
                     else RangeExpr ((i1, Inclusive), i2)
            <?> "range" 
 
-let explicitType = pchar ':' >>. ws >>.
-                   (keyword "int" <|> keyword "float" <|> keyword "string" <|> keyword "bool" <|> keyword "rune") .>>
+let typeKeyWord = (keyword "int" <|> keyword "float" <|> keyword "string" <|> keyword "bool" <|> keyword "rune") .>>
                    ws .>>. opt (keyword "array" <|> keyword "set")
                    |>> fun (str, optCol) ->
                            let typeKey = match str with
@@ -132,7 +132,7 @@ let explicitType = pchar ':' >>. ws >>.
                                          | Some col -> if col = "array" then Some CollectionType.Array else Some Set
                                          | None -> None
                            AST.Type (typeKey, colType)
-                   <?> "explicit type"
+let explicitType = pchar ':' >>. ws >>. typeKeyWord <?> "explicit type"
 
 let rec literal () = floatLit <|> intLit <|> stringLit <|> boolLit <|> runeLit <|>
                      (arrayLit |>> CollectionLiteral) <|> (mapLit |>> CollectionLiteral) // <|> recordLit <|> tupleLit
@@ -203,13 +203,13 @@ and accessExpr = range <|>
                  componentAccessExpr <|>
                  (identifier |>> IdentifierExpr) <?> "access expr"
 
-and funcExpr = identifier .>> ws1 .>>. sepBy1 accessExpr ws1 |>> FunctionCallExpr <|> accessExpr <?> "function call"
+and funcExpr = identifier .>> ws1 .>>. sepBy1 accessExpr ws1NoNl |>> FunctionCallExpr <|> accessExpr <?> "function call"
 and unaryExpr = (unaryOp .>>. funcExpr) |>> UnaryExpr <|> funcExpr <?> "unary expression"
 and binaryArithExpr = (unaryExpr .>> ws .>>. binaryArithOp .>> ws .>>. unaryExpr) |>> BinaryArithmeticExpr <|> unaryExpr <?> "binaryArth expr"
 and binaryCompExpr = (binaryArithExpr .>> ws .>>. binaryCompOp .>> ws .>>. binaryArithExpr) |>> BinaryComparisonExpr <|> binaryArithExpr <?> "binaryComp expr"
 
-let statement, binding, expression =
-    let rec statement () = (binding <|> (expression |>> Statement.Expression)) <?> "statement"
+let statement, binding, expression, typeDeclaration =
+    let rec statement () = (binding <|> (expression |>> Statement.Expression) <|> typeDeclaration) <?> "statement"
 
     //// Bindings \\\\
     and immutableBinding = keyword "let" >>. ws >>. identifier .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>>. expr() |>> ImmutableBinding
@@ -241,6 +241,21 @@ let statement, binding, expression =
 
     and expression = ifExpr() <|> forExpr() <|> whileExpr() <|> matchExpr() <|> (expr() |>> Expression) <?> "higher expression"
 
-    statement, binding, expression
+    
+    // Type Declarations
+    and unionDeclaration = keyword "type" >>. ws >>. identifier .>> ws .>> pchar '=' .>> ws .>>. many1 (pchar '|' >>. ws >>. identifier .>> ws .>>. opt (keyword "of" >>. ws >>. typeKeyWord .>> ws .>>. many (pchar '*' >>. ws >>. typeKeyWord .>> ws)))
+                           |>> fun (name, cases) ->
+                                   let ucases = [
+                                       for c in cases do
+                                           if (snd c).IsSome then yield Multiple (fst c, (fst (snd c).Value)::(snd (snd c).Value))
+                                           else yield UnionCase.Single (fst c)
+                                   ]
+                                   UnionDeclaration (name, ucases)
+                           <?> "unionDeclaration"
+                               
+    
+    and typeDeclaration = unionDeclaration |>> TypeDeclaration
+    
+    statement, binding, expression, typeDeclaration
 
 let parseProgram = ws >>. sepBy1 (statement()) ws
