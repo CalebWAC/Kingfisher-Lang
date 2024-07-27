@@ -112,7 +112,7 @@ and IfCondition =
 
 and ForExpr = (((Identifier option * Identifier) * Expression) * Expression option) * Statement list
 and WhileExpr = Expression * Statement list 
-and MatchExpr = Identifier * (Expression * Statement list) list // change first two to expression, last to statement
+and MatchExpr = Identifier * (Expression * Statement list) list // change first to expression
 
 and Expression = 
     | BinaryLogicalExpr of (Expression * BinaryLogicalOperator) * Expression

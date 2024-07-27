@@ -48,13 +48,15 @@ let rec traverse expr =
                     elif constants.ContainsKey(iden) then constants[iden].Value
                     else unionValues[iden])
     | FunctionCallExpr (iden, exprs) ->
-        if functions.ContainsKey(iden) |> not then
+        if functions.ContainsKey(iden) |> not && unionValues.ContainsKey(iden) |> not then
             printfn $"{iden} does not exist"; (false, Type(Void, None))
         else
-            let callValid = exprs 
-                            |> List.forall (fun expr ->
-                                snd (traverse expr) = ((fst(functions[iden]))[exprs |> List.findIndex (fun e -> e = expr)]).Value)
-            (callValid, (snd functions[iden]))
+            if functions.ContainsKey(iden) then
+                let callValid = exprs 
+                                |> List.forall (fun expr ->
+                                    snd (traverse expr) = ((fst(functions[iden]))[exprs |> List.findIndex (fun e -> e = expr)]).Value)
+                (callValid, (snd functions[iden]))
+            else (true, unionValues[iden])
     | ArrayExpr (iden, _) ->
         if variables.ContainsKey(iden) |> not && constants.ContainsKey(iden) |> not then
             printfn $"{iden} does not exist"; (false, Type(Void, None))
@@ -157,7 +159,8 @@ let rec validateStatement statement =
         | Expression e -> traverse e |> ignore
     | TypeDeclaration decl ->
         match decl with
-        | RecordDeclaration tuple -> failwith "todo"
+        | RecordDeclaration (iden, _) ->
+            customTypes.Add(iden)
         | UnionDeclaration (iden, cases) ->
             customTypes.Add(iden)
             for c in cases do

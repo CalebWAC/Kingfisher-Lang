@@ -1,8 +1,15 @@
 # The Kingfisher Programming Language
-Kingfisher is a programming language designed with built-in syntax for an entity component system with modern features, inspired by F#, Swift, and Haxe. The specification file details the syntax of the language, and the grammar file has the specific grammar used to parse the language.
+Kingfisher is a programming language designed with built-in syntax for an entity component system with modern features, inspired by F#, Swift, and Haxe. Some features of the language include:
+- Everything is an expression
+- Support for custom types (records, discriminated unions, tuples)
+- Flexible whitespace-based syntax (to be implemented)
+- ECS without any extra libraries (to be implemented)
+
+
+ The specification file details the syntax of the language, and the grammar file has the specific grammar used to parse the language.
 
 ## Current State
-Currently, only a subset of the language is functional. This includes bindings, basic control flow, and a standard library of one function, println. As the parser is improved, the capabilities of the language will expand to its written standard.
+Currently, only a subset of the language is functional. This includes bindings, basic control flow, union and record types, and a standard library of one function, println. As the parser is improved, the capabilities of the language will expand to its written standard. Kingfisher is compiled to Haxe, so in order to run a Kingfisher program, one will need the Haxe compiler installed.
 
 ## Sample code
 ```

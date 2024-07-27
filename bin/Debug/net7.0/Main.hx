@@ -5,19 +5,21 @@ Spades;
 Diamonds;
 }
 
-enum Card {
+enum Value {
 King;
 Queen;
 Jack;
-Number(t121102: Int);
+Number(k115116: Int);
 }
 
+typedef Card = {var suit: Suit; var value: Value; }
 class Main {
 
     static function println(str: Any) { Sys.println(str); }
     static function print(str: Any) { Sys.print(str); }
 
 	public static function main() {
+var jackOfSpades  = {suit: Spades,value: Jack};
 var arr  = [1, 3, 3, 5, 23, -4, 0, 3, 1, 10];
 for (i in 0...10) {
 var e  = arr[i];

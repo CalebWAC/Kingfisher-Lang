@@ -200,7 +200,15 @@ let generateType statement =
     match statement with
     | TypeDeclaration decl ->
         match decl with
-        | RecordDeclaration tuple -> failwith "todo"
+        | RecordDeclaration (iden, values) ->
+            output.Write($"typedef {iden} = " + "{")
+            for v in values do
+                output.Write($"var {snd(fst v)}: ")
+                match fst (snd v) with
+                | Custom s -> output.Write(s)
+                | s -> output.Write(s)
+                output.Write("; ")
+            output.WriteLine("}")
         | UnionDeclaration (iden, cases) ->
             output.WriteLine($"enum {iden} " + "{")
             

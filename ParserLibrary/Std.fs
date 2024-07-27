@@ -148,11 +148,6 @@ and mapLit = between (pchar '[')
                     (literal() .>> ws .>> pchar ':' .>> ws .>>. literal())
                     (pchar ',' .>> ws))
                 (pchar ']') |>> MapLiteral <?> "map"
-                
-and recordLit = between (pchar '{')
-                    (ws >>. opt (identifier .>> ws .>> keyword "with") .>> ws .>>.
-                     (sepBy1 (identifier .>> ws .>> pchar '=' .>> ws .>>. literal() .>> ws) (pchar ',' .>> ws)))
-                    (pchar '}') |>> RecordLiteral <?> "record"
                     
 and tupleLit = between (pchar '(')
                     (sepBy1 (literal()) (pchar ',' .>> ws))
@@ -192,21 +187,29 @@ let binaryLogOp =
 //// Expressions \\\\
 let rec expr () = ((binaryCompExpr .>> ws .>>. binaryLogOp .>> ws .>>. binaryCompExpr) |>> BinaryLogicalExpr <|> binaryCompExpr) //<?> "expression"
 
+and arrayExpr() = identifier .>> ws .>>. between (pchar '[') (literal() <|> (identifier |>> IdentifierExpr)) (pchar ']') |>> ArrayExpr <?> "array access"
+and dataAccessExpr() = identifier .>> pchar '.' .>>. identifier |>> DataAccessExpr <?> "data access"
+and componentAccessExpr() = identifier .>> pchar '@' .>>. identifier |>> ComponentAccessExpr <?> "component access"
+and accessExpr() = range <|>
+                   literal() <|>
+                   (recordLit() |>> LiteralExpr) <|>
+                   arrayExpr() <|>
+                   dataAccessExpr() <|>
+                   componentAccessExpr() <|>
+                   (identifier |>> IdentifierExpr) <?> "access expr"
 
-and arrayExpr = identifier .>> ws .>>. between (pchar '[') (literal() <|> (identifier |>> IdentifierExpr)) (pchar ']') |>> ArrayExpr <?> "array access"
-and dataAccessExpr = identifier .>> pchar '.' .>>. identifier |>> DataAccessExpr <?> "data access"
-and componentAccessExpr = identifier .>> pchar '@' .>>. identifier |>> ComponentAccessExpr <?> "component access"
-and accessExpr = range <|>
-                 literal() <|>
-                 arrayExpr <|>
-                 dataAccessExpr <|>
-                 componentAccessExpr <|>
-                 (identifier |>> IdentifierExpr) <?> "access expr"
-
-and funcExpr = identifier .>> ws1 .>>. sepBy1 accessExpr ws1NoNl |>> FunctionCallExpr <|> accessExpr <?> "function call"
-and unaryExpr = (unaryOp .>>. funcExpr) |>> UnaryExpr <|> funcExpr <?> "unary expression"
+and funcExpr() = identifier .>> ws1 .>>. sepBy1 (accessExpr()) ws1NoNl |>> FunctionCallExpr <|> accessExpr() <?> "function call"
+and unaryExpr = (unaryOp .>>. funcExpr()) |>> UnaryExpr <|> funcExpr() <?> "unary expression"
 and binaryArithExpr = (unaryExpr .>> ws .>>. binaryArithOp .>> ws .>>. unaryExpr) |>> BinaryArithmeticExpr <|> unaryExpr <?> "binaryArth expr"
 and binaryCompExpr = (binaryArithExpr .>> ws .>>. binaryCompOp .>> ws .>>. binaryArithExpr) |>> BinaryComparisonExpr <|> binaryArithExpr <?> "binaryComp expr"
+
+and rae() = range <|> literal() <|> arrayExpr() <|> dataAccessExpr() <|> componentAccessExpr() <|> (identifier |>> IdentifierExpr) <?> "access expr"
+and ferl() = identifier .>> ws1 .>>. sepBy1 (rae()) ws1NoNl |>> FunctionCallExpr <|> (rae()) <?> "function call"
+and recordLit() = between (pchar '{')
+                    (ws >>. opt (identifier .>> ws .>> keyword "with") .>> ws .>>.
+                     (sepBy1 (identifier .>> ws .>> pchar '=' .>> ws .>>. (ferl()) .>> ws) (pchar ',' .>> ws)))
+                    (pchar '}') |>> RecordLiteral <?> "record"
+
 
 let statement, binding, expression, typeDeclaration =
     let rec statement () = (binding <|> (expression |>> Statement.Expression) <|> typeDeclaration) <?> "statement"
@@ -255,7 +258,7 @@ let statement, binding, expression, typeDeclaration =
     
     and recordDeclaration = keyword "type" >>. ws >>. identifier .>> ws .>> pchar '=' .>> ws .>> pchar '{' .>>. sepBy1 (ws >>. opt (keyword "var") .>> ws .>>. identifier .>> ws .>>. explicitType) (pchar ',') .>> ws .>> pchar '}' |>> RecordDeclaration       
     
-    and typeDeclaration = unionDeclaration |>> TypeDeclaration
+    and typeDeclaration = unionDeclaration <|> recordDeclaration |>> TypeDeclaration
     
     statement, binding, expression, typeDeclaration
 
