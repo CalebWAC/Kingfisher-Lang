@@ -185,8 +185,11 @@ let rec generateStatement stat =
         | MatchExpr (iden, cases) ->
             output.Write($"switch ({iden}) " + "{")
             for case in cases do
-                output.Write($"case {fst case}: ")
-                generateStatement (snd case)
+                output.Write("case ")
+                generateExpr (fst case)
+                output.Write(": ")
+                for c in snd case do
+                    generateStatement c
             output.WriteLine("}")
         | Expression expression ->
             generateExpr expression
@@ -207,7 +210,13 @@ let generateType statement =
                 | Multiple(iden, types) ->
                     output.Write($"{iden}(")
                     for t in types do
-                        output.Write($"_: {fst t}")
+                        let rnd = System.Random()
+                        let name = $"{rnd.Next(97, 122) |> char}{rnd.Next(97, 122)}{rnd.Next(97, 122)}"
+                        
+                        output.Write($"{name}: ")
+                        match fst t with
+                        | Custom s -> output.Write(s)
+                        | s -> output.Write(s)
                         if List.findIndex (fun ty -> ty = t) types <> types.Length - 1 then output.Write(", ")
                     output.WriteLine(");")
             output.WriteLine("}\n")

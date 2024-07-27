@@ -42,7 +42,7 @@ and TypeDeclaration =
     | TypeAlias of TypeAlias
     | Extension of Extension
 
-and RecordDeclaration = Identifier * bool list * Identifier list * Type list
+and RecordDeclaration = Identifier * ((string option * Identifier) * Type) list
 and ComponentDeclaration = Identifier * Identifier list * Type list
 and TypeAlias = Identifier * Type
 and Extension = Identifier * Statement list
@@ -62,6 +62,7 @@ and TypeKeyWord =
     | Rune
     | Void
     | Map
+    | Custom of string
 
 and CollectionType =
     | Array
@@ -111,7 +112,7 @@ and IfCondition =
 
 and ForExpr = (((Identifier option * Identifier) * Expression) * Expression option) * Statement list
 and WhileExpr = Expression * Statement list 
-and MatchExpr = Identifier * (Identifier * Statement) list // change first two to expression, last to statement
+and MatchExpr = Identifier * (Expression * Statement list) list // change first two to expression, last to statement
 
 and Expression = 
     | BinaryLogicalExpr of (Expression * BinaryLogicalOperator) * Expression

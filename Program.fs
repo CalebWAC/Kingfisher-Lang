@@ -9,13 +9,13 @@ let main loc =
     
     let ast = runString parseProgram file
 
-    //ast
-    //|> printResult
+    ast
+    |> printResult
 
     SemanticAnalysis.analyze ast
     CodeGeneration.generate ast
     
-    printfn "\n\n\n\n"
+    printfn "\n\n"
     System.Diagnostics.Process.Start("cmd.exe", "/C haxe --main Main.hx --interp") |> ignore
     
     0

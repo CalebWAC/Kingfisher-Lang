@@ -1,7 +1,15 @@
+enum Suit {
+Hearts;
+Clubs;
+Spades;
+Diamonds;
+}
+
 enum Card {
 King;
 Queen;
 Jack;
+Number(t121102: Int);
 }
 
 class Main {
@@ -15,9 +23,10 @@ for (i in 0...10) {
 var e  = arr[i];
 println(e);
 }
-var card  = Jack;
+var card  = Number(9);
 switch (card) {case King: println("It is a king");
 case Queen: println("It is a queen");
 case Jack: println("It is a jack");
+case Number(num): println("It is a number");
 }
 }}

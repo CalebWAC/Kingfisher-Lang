@@ -119,15 +119,15 @@ let range = intLit .>>. (keyword ".." <|> keyword "...") .>>. opt (intLit .>>. (
                     else RangeExpr ((i1, Inclusive), i2)
            <?> "range" 
 
-let typeKeyWord = (keyword "int" <|> keyword "float" <|> keyword "string" <|> keyword "bool" <|> keyword "rune") .>>
-                   ws .>>. opt (keyword "array" <|> keyword "set")
+let typeKeyWord = identifier .>> ws .>>. opt (keyword "array" <|> keyword "set")
                    |>> fun (str, optCol) ->
                            let typeKey = match str with
                                          | "int" -> Int
                                          | "float" -> Float
                                          | "string" -> TypeKeyWord.String
                                          | "bool" -> Bool
-                                         | _ -> Rune
+                                         | "rune" -> Rune
+                                         | s -> Custom s
                            let colType = match optCol with
                                          | Some col -> if col = "array" then Some CollectionType.Array else Some Set
                                          | None -> None
@@ -237,7 +237,7 @@ let statement, binding, expression, typeDeclaration =
 
     and forExpr() = opt (identifier .>> pchar '@') .>> ws .>> keyword "for" .>> ws .>>. identifier .>> ws .>> keyword "in" .>> ws .>>. expr() .>> ws .>>. opt (keyword "where" >>. ws >>. expr()) .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (expressionFor() .>> ws) .>> pchar '}' |>> ForExpr <?> "for loop"
     and whileExpr() = keyword "while" >>. ws >>. expr() .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (expressionWhile() .>> ws) .>> pchar '}' |>> WhileExpr <?> "while loop"
-    and matchExpr() = keyword "when" >>. ws >>. identifier .>> ws .>> keyword "is" .>> ws .>> pchar '{' .>> ws .>>. many1 (identifier .>> ws .>> keyword "->" .>> ws .>>. expressionMatch() .>> ws) .>> ws .>> pchar '}' |>> MatchExpr <?> "match"
+    and matchExpr() = keyword "when" >>. ws >>. identifier .>> ws .>> keyword "is" .>> ws .>> pchar '{' .>> ws .>>. many1 (expr() .>> ws .>> keyword "->" .>> ws .>>. many1 (expressionMatch()) .>> ws) .>> ws .>> pchar '}' |>> MatchExpr <?> "match"
 
     and expression = ifExpr() <|> forExpr() <|> whileExpr() <|> matchExpr() <|> (expr() |>> Expression) <?> "higher expression"
 
@@ -252,7 +252,8 @@ let statement, binding, expression, typeDeclaration =
                                    ]
                                    UnionDeclaration (name, ucases)
                            <?> "unionDeclaration"
-                               
+    
+    and recordDeclaration = keyword "type" >>. ws >>. identifier .>> ws .>> pchar '=' .>> ws .>> pchar '{' .>>. sepBy1 (ws >>. opt (keyword "var") .>> ws .>>. identifier .>> ws .>>. explicitType) (pchar ',') .>> ws .>> pchar '}' |>> RecordDeclaration       
     
     and typeDeclaration = unionDeclaration |>> TypeDeclaration
     
