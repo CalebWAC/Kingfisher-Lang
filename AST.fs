@@ -103,15 +103,15 @@ and Expr =
     | MatchExpr of MatchExpr
     | Expression of Expression
 
-and IfExpr = (IfExpress * IfExpress list option) * Expression list option  // change Expression to statement
-and IfExpress = (IfCondition * Expression option) * Expression list // change!
+and IfExpr = (IfExpress * IfExpress list option) * Statement list option  // change Expression to statement
+and IfExpress = (IfCondition * Expression option) * Statement list // change!
 and IfCondition =
     | Expr of Expression
     | LetStatement of Identifier  * Expression
 
 and ForExpr = (((Identifier option * Identifier) * Expression) * Expression option) * Statement list
-and WhileExpr = Expression * Expr list // change to statement
-and MatchExpr = Identifier * (Identifier * Expr) list // change first two to expression, last to statement
+and WhileExpr = Expression * Statement list // change to statement
+and MatchExpr = Identifier * (Identifier * Statement) list // change first two to expression, last to statement
 
 and Expression = 
     | BinaryLogicalExpr of (Expression * BinaryLogicalOperator) * Expression
@@ -123,7 +123,7 @@ and Expression =
     | ArrayExpr of Identifier * Expression
     | DataAccessExpr of Identifier * Identifier
     | ComponentAccessExpr of Identifier * Identifier
-    | RangeExpr of Expression * RangeType * Expression
+    | RangeExpr of (Expression * RangeType) * Expression
     | LiteralExpr of Literal
 
 and RangeType = 

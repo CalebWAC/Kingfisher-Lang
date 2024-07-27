@@ -119,7 +119,7 @@ let rec validateStatement statement =
             variables.Remove(iden) |> ignore
         | WhileExpr (expr, exprs) ->
             traverse expr |> ignore
-            for e in exprs do validateBindings e |> ignore
+            for e in exprs do validateStatement e
         | IfExpr ((e, el), els) ->
             let evalIf ifExpr =
                 match fst (fst ifExpr) with
@@ -127,7 +127,7 @@ let rec validateStatement statement =
                 | LetStatement (iden, expr) ->
                     traverse expr |> ignore
                     variables.Add(iden, None)
-                for expr in snd ifExpr do traverse expr |> ignore
+                for expr in snd ifExpr do validateStatement expr
             
             evalIf e
             match el with
@@ -135,11 +135,11 @@ let rec validateStatement statement =
             | None -> ()
             
             match els with
-            | Some els -> for elsIf in els do traverse elsIf |> ignore
+            | Some els -> for elsIf in els do validateStatement elsIf
             | None -> ()
         | MatchExpr (_, cases) ->
             for case in cases do
-                snd case |> validateBindings |> ignore
+                snd case |> validateStatement
         | Expression e -> traverse e |> ignore
     | TypeDeclaration decl -> ()
 

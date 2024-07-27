@@ -141,7 +141,7 @@ let rec generateStatement stat =
                        | _ -> ()
             output.WriteLine($"{expr}) " + "{")
             for e in snd i do
-                generateExpr e
+                generateStatement e
                 output.Write(";")
             output.WriteLine("}")
             
@@ -153,14 +153,14 @@ let rec generateStatement stat =
                                | _ -> ()
                     output.WriteLine($"{expr}) " + "{")
                     for e in snd els do
-                        generateExpr e
+                        generateStatement e
                         output.Write(";")
                     output.WriteLine("}")
                     
             if e.IsSome then
                 output.Write("else {")
                 for ex in e.Value do
-                    generateExpr ex
+                    generateStatement ex
                     output.Write(";")
                 output.WriteLine("}")
         | ForExpr ((((_, iden), expr), _), stats) ->
@@ -174,13 +174,13 @@ let rec generateStatement stat =
             output.Write("while (")
             generateExpr expr
             output.Write(") {")
-            for e in exprs do Statement.Expression e |> generateStatement
+            for e in exprs do generateStatement e 
             output.WriteLine("}")
         | MatchExpr (iden, cases) ->
             output.Write($"switch ({iden}) " + "{")
             for case in cases do
                 output.Write($"case {fst case}: ")
-                generateStatement ((snd case) |> Statement.Expression)
+                generateStatement (snd case)
                 output.WriteLine("; break;")
             output.WriteLine("}")
         | Expression expression ->

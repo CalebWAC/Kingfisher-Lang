@@ -9,8 +9,8 @@ let main loc =
     
     let ast = runString parseProgram file
 
-    //ast
-    //|> printResult
+    ast
+    |> printResult
 
     SemanticAnalysis.analyze ast
     CodeGeneration.generate ast
