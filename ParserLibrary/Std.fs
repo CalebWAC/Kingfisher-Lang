@@ -217,7 +217,7 @@ let statement, binding, expression, typeDeclaration =
     //// Bindings \\\\
     and immutableBinding = keyword "let" >>. ws >>. identifier .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>>. expr() |>> ImmutableBinding
     and mutableBinding = keyword "var" >>. ws >>. identifier .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>>. expr() |>> MutableBinding
-    and reassignment = identifier .>> ws .>> keyword "<-" .>> ws .>>. expr() |>> Reassignment
+    and reassignment = (identifier |>> IdentifierExpr <|> dataAccessExpr()) .>> ws .>> keyword "<-" .>> ws .>>. expr() |>> Reassignment
 
     and entityBinding = keyword "ent" >>. ws >>. identifier .>> ws .>> pchar '=' .>> ws .>>. sepBy1 identifier ws1 |>> EntityBinding
     and systemBinding = keyword "sys" >>. ws >>. sepBy1 identifier ws .>> ws .>>. opt (pchar '|' >>. ws >>. identifier .>> ws) .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>. many1 (expr()) .>> ws .>> pchar '}'

@@ -19,7 +19,7 @@ and Binding =
 
 and ImmutableBinding = (Identifier * Type option) * Expression
 and MutableBinding = (Identifier * Type option) * Expression
-and Reassignment = Identifier (* * BinaryArithmeticOperator option *) * Expression
+and Reassignment = Expression (* * BinaryArithmeticOperator option *) * Expression
 
 and Parameter =
     | Unspecified of Identifier

@@ -10,7 +10,8 @@ let variables = Dictionary<string, Type option>()
 let unionValues = Dictionary<string, Type>()
 let customTypes = Dictionary<string, (string * Type) list option>()
 
-let components = List<string>()
+let components = Dictionary<string,  (string * Type) list option>()
+let activeComponents = List<string>()
 
 let functions = Dictionary<string, Type option list * Type>()
 functions.Add ("println", ([Some(String, None)], (Void, None)))
@@ -63,10 +64,22 @@ let rec traverse expr =
         if variables.ContainsKey(iden) |> not && constants.ContainsKey(iden) |> not then
             printfn $"{iden} does not exist"; (false, Type(Void, None))
         else (true, if variables.ContainsKey(iden) then (fst variables[iden].Value, None) else (fst constants[iden].Value, None))
-    | DataAccessExpr (iden, _) ->
-        if variables.ContainsKey(iden) |> not && constants.ContainsKey(iden) |> not then
+    | DataAccessExpr (iden, mem) ->
+        if (variables.ContainsKey(iden) || constants.ContainsKey(iden) || activeComponents.Contains(iden)) |> not then
             printfn $"{iden} does not exist"; (false, Type(Void, None))
-        else (true, if variables.ContainsKey(iden) then variables[iden].Value else constants[iden].Value)
+        else
+            if activeComponents.Contains(iden) then
+                try let memType = components[iden].Value |> List.find (fun (name, _) -> name = mem)
+                    (true, snd memType)
+                with | _ ->
+                    printfn $"Could not find member {mem}"     
+                    (false, Type(Void, None))
+            else
+                try let memType = customTypes[iden].Value |> List.find (fun (name, _) -> name = mem)
+                    (true, snd memType)
+                with | _ ->
+                    printfn $"Could not find member {mem}"     
+                    (false, Type(Void, None))
     | ComponentAccessExpr (iden, _) ->
         if variables.ContainsKey(iden) |> not && constants.ContainsKey(iden) |> not then
             printfn $"{iden} does not exist"; (false, Type(Void, None))
@@ -81,11 +94,13 @@ let rec traverse expr =
                         | CollectionLiteral c -> match c with
                                                  | ArrayLiteral (col, _) -> Type(Int, Some col)
                                                  | MapLiteral _ -> Type(Map, None)
-                        | RecordLiteral (_, members) -> Type (Void, None)
-                            (* for cusTyp in customTypes do
-                                members
-                                |> List.forall (fun (iden, expr) -> iden = snd cusTyp.Value) |> ignore
-                            () *)
+                        | RecordLiteral (_, members) ->
+                            let mutable ret = Type(Void, None)
+                            for cusTyp in customTypes do
+                                let typ = Seq.zip cusTyp.Value.Value members
+                                          |> Seq.forall (fun (c, m) -> fst c = fst m && snd c = snd (traverse (snd m)))
+                                if typ then ret <- Type(Custom cusTyp.Key, None)
+                            ret
                         | _ -> Type (Void, None)
         (true, litToType)
     | _ -> (true, Type(Void, None))
@@ -126,15 +141,28 @@ let rec validateStatement statement =
                 | Specified ((_, iden), _) ->
                     constants.Remove(iden) |> ignore
         | Reassignment res ->
-            if variables.ContainsKey(fst res) |> not then
-                if constants.ContainsKey(fst res) then
-                    printfn $"{fst res} is not mutable"
-                else printfn $"{fst res} does not exist"
+            match fst res with
+            | IdentifierExpr s ->
+                if variables.ContainsKey(s) |> not then
+                    if constants.ContainsKey(s) then
+                        printfn $"{s} is not mutable"
+                    else printfn $"{s} does not exist"
+            | DataAccessExpr(s, _) ->
+                if variables.ContainsKey(s) |> not then
+                    if constants.ContainsKey(s) then
+                        printfn $"{s} is not mutable"
+                    else printfn $"{s} does not exist"
+                else
+                    fst res |> traverse |> ignore
+            | _ -> ()
+            
             snd res |> traverse |> ignore
         | EntityBinding (_, coms) ->
-            coms |> List.iter (fun c -> if components.Contains(c) |> not then printfn $"Component {c} does not exist" )
+            coms |> List.iter (fun c -> if components.ContainsKey(c) |> not then printfn $"Component {c} does not exist" )
         | SystemDeclaration ((coms, _), exprs) ->
-            coms |> List.iter (fun c -> if components.Contains(c) |> not then printfn $"Component {c} does not exist")
+            coms |> List.iter (fun c ->
+                if components.ContainsKey(c) |> not then printfn $"Component {c} does not exist"
+                else activeComponents.Add(c))
             for e in exprs do
                 traverse e |> ignore
     | Statement.Expression expr ->
@@ -181,7 +209,7 @@ let rec validateStatement statement =
                 | Single s -> unionValues.Add(s, (Custom iden, None))
                 | Multiple (s, _) -> unionValues.Add(s, (Custom iden, None))
         | ComponentDeclaration (iden, members) ->
-            components.Add(iden)
+            components.Add(iden, Some members)
             for _, typ in members do
                 checkType typ
         | TypeAlias tuple -> failwith "todo"
@@ -194,6 +222,6 @@ let analyze ast =
             validateStatement statement
     | Failure _ -> ()
     
-    //for i in variables do printf $"{i}\t"
+    for i in constants do printf $"{i}\t"
     //printfn ""
     //for i in functions do printf $"{i}\t"
