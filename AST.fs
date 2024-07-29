@@ -27,13 +27,13 @@ and Parameter =
 and FunctionDeclaration = ((Identifier * Parameter list) * Type option) * Expression list
 
 and EntityBinding = Identifier * Identifier list
-and SystemDeclaration = (Identifier list * SystemClassification option) * Expr list // change
+and SystemDeclaration = (Identifier list * SystemClassification) * Expression list // change
 
-and SystemClassification = string // change
-    (* | Awake
+and SystemClassification =
+    | Awake
     | Start
     | Update 
-    | End *)
+    | End
 
 and TypeDeclaration =
     | RecordDeclaration of RecordDeclaration
@@ -43,7 +43,7 @@ and TypeDeclaration =
     | Extension of Extension
 
 and RecordDeclaration = Identifier * ((string option * Identifier) * Type) list
-and ComponentDeclaration = Identifier * Identifier list * Type list
+and ComponentDeclaration = Identifier * (Identifier * Type) list
 and TypeAlias = Identifier * Type
 and Extension = Identifier * Statement list
 

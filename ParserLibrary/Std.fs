@@ -212,7 +212,7 @@ and recordLit() = between (pchar '{')
 
 
 let statement, binding, expression, typeDeclaration =
-    let rec statement () = (binding <|> (expression |>> Statement.Expression) <|> typeDeclaration) <?> "statement"
+    let rec statement () = (binding <|> (expression() |>> Statement.Expression) <|> typeDeclaration) <?> "statement"
 
     //// Bindings \\\\
     and immutableBinding = keyword "let" >>. ws >>. identifier .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>>. expr() |>> ImmutableBinding
@@ -220,12 +220,21 @@ let statement, binding, expression, typeDeclaration =
     and reassignment = identifier .>> ws .>> keyword "<-" .>> ws .>>. expr() |>> Reassignment
 
     and entityBinding = keyword "ent" >>. ws >>. identifier .>> ws .>> pchar '=' .>> ws .>>. sepBy1 identifier ws1 |>> EntityBinding
-    //and systemBinding = keyword "sys" >>. ws >>. sepBy1 identifier ws .>> ws .>>. opt (pchar '|' >>. ws >>. identifier .>> ws) .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>. many1 expression .>> ws .>> pchar '}' |>> SystemDeclaration
+    and systemBinding = keyword "sys" >>. ws >>. sepBy1 identifier ws .>> ws .>>. opt (pchar '|' >>. ws >>. identifier .>> ws) .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>. many1 (expr()) .>> ws .>> pchar '}'
+                        |>> fun ((coms, sys), expr) ->
+                            let systemType = match sys with
+                                             | None -> Start
+                                             | Some typ -> match typ with
+                                                           | "Start" -> Start
+                                                           | "Update" -> Update
+                                                           | "Awake" -> Awake
+                                                           | "End" -> End
+                            SystemDeclaration((coms, systemType), expr)
 
     and parameter = (pchar '(' >>. ws >>. ((opt identifier .>> ws .>>. identifier) <|> (opt (keyword "~") .>>. identifier)) .>> ws .>>. opt explicitType .>> ws .>> pchar ')' |>> Specified) <|> (identifier |>> Unspecified) .>> ws <?> "parameter"
     and functionBinding = keyword "fun" >>. ws >>. identifier .>> ws .>>. many parameter .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>. many1 (expr()) .>> ws .>> pchar '}' |>> FunctionDeclaration
 
-    and binding = (immutableBinding <|> mutableBinding <|> entityBinding <|> functionBinding <|> reassignment) |>> Binding <?> "binding"
+    and binding = (immutableBinding <|> mutableBinding <|> entityBinding <|> functionBinding <|> reassignment <|> systemBinding) |>> Binding <?> "binding"
     
     
     //// Control Flow Expressions \\\\
@@ -242,7 +251,7 @@ let statement, binding, expression, typeDeclaration =
     and whileExpr() = keyword "while" >>. ws >>. expr() .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (expressionWhile() .>> ws) .>> pchar '}' |>> WhileExpr <?> "while loop"
     and matchExpr() = keyword "when" >>. ws >>. identifier .>> ws .>> keyword "is" .>> ws .>> pchar '{' .>> ws .>>. many1 (expr() .>> ws .>> keyword "->" .>> ws .>>. many1 (expressionMatch()) .>> ws) .>> ws .>> pchar '}' |>> MatchExpr <?> "match"
 
-    and expression = ifExpr() <|> forExpr() <|> whileExpr() <|> matchExpr() <|> (expr() |>> Expression) <?> "higher expression"
+    and expression() = ifExpr() <|> forExpr() <|> whileExpr() <|> matchExpr() <|> (expr() |>> Expression) <?> "higher expression"
 
     
     // Type Declarations
@@ -258,7 +267,10 @@ let statement, binding, expression, typeDeclaration =
     
     and recordDeclaration = keyword "type" >>. ws >>. identifier .>> ws .>> pchar '=' .>> ws .>> pchar '{' .>>. sepBy1 (ws >>. opt (keyword "var") .>> ws .>>. identifier .>> ws .>>. explicitType) (pchar ',') .>> ws .>> pchar '}' |>> RecordDeclaration       
     
-    and typeDeclaration = unionDeclaration <|> recordDeclaration |>> TypeDeclaration
+    and componentDeclaration = keyword "com" >>. ws >>. identifier .>> ws .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>. many1 (identifier .>> ws .>>. explicitType) .>> ws .>> pchar '}' |>> ComponentDeclaration
+    
+    and typeDeclaration = unionDeclaration <|> recordDeclaration <|> componentDeclaration |>> TypeDeclaration
+    
     
     statement, binding, expression, typeDeclaration
 

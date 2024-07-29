@@ -8,7 +8,9 @@ let constants = Dictionary<string, Type option>()
 let variables = Dictionary<string, Type option>()
 
 let unionValues = Dictionary<string, Type>()
-let customTypes = List<string>()
+let customTypes = Dictionary<string, (string * Type) list option>()
+
+let components = List<string>()
 
 let functions = Dictionary<string, Type option list * Type>()
 functions.Add ("println", ([Some(String, None)], (Void, None)))
@@ -16,7 +18,7 @@ functions.Add ("println", ([Some(String, None)], (Void, None)))
 let checkType typ =
     match fst typ with
     | Custom s ->
-        if customTypes.Contains(s) |> not then
+        if customTypes.ContainsKey(s) |> not then
             printfn $"Type {s} does not exist"
     | _ -> ()
 
@@ -79,6 +81,11 @@ let rec traverse expr =
                         | CollectionLiteral c -> match c with
                                                  | ArrayLiteral (col, _) -> Type(Int, Some col)
                                                  | MapLiteral _ -> Type(Map, None)
+                        | RecordLiteral (_, members) -> Type (Void, None)
+                            (* for cusTyp in customTypes do
+                                members
+                                |> List.forall (fun (iden, expr) -> iden = snd cusTyp.Value) |> ignore
+                            () *)
                         | _ -> Type (Void, None)
         (true, litToType)
     | _ -> (true, Type(Void, None))
@@ -124,8 +131,12 @@ let rec validateStatement statement =
                     printfn $"{fst res} is not mutable"
                 else printfn $"{fst res} does not exist"
             snd res |> traverse |> ignore
-        | EntityBinding ent -> ()
-        | SystemDeclaration sys -> ()
+        | EntityBinding (_, coms) ->
+            coms |> List.iter (fun c -> if components.Contains(c) |> not then printfn $"Component {c} does not exist" )
+        | SystemDeclaration ((coms, _), exprs) ->
+            coms |> List.iter (fun c -> if components.Contains(c) |> not then printfn $"Component {c} does not exist")
+            for e in exprs do
+                traverse e |> ignore
     | Statement.Expression expr ->
         match expr with
         | ForExpr ((((_, iden), e), _), exprs) ->
@@ -159,15 +170,20 @@ let rec validateStatement statement =
         | Expression e -> traverse e |> ignore
     | TypeDeclaration decl ->
         match decl with
-        | RecordDeclaration (iden, _) ->
-            customTypes.Add(iden)
+        | RecordDeclaration (iden, members) ->
+            let mems = members
+                       |> List.map (fun ((_, iden), typ) -> (iden, typ))
+            customTypes.Add(iden, Some mems)
         | UnionDeclaration (iden, cases) ->
-            customTypes.Add(iden)
+            customTypes.Add(iden, None)
             for c in cases do
                 match c with
                 | Single s -> unionValues.Add(s, (Custom iden, None))
                 | Multiple (s, _) -> unionValues.Add(s, (Custom iden, None))
-        | ComponentDeclaration tuple -> failwith "todo"
+        | ComponentDeclaration (iden, members) ->
+            components.Add(iden)
+            for _, typ in members do
+                checkType typ
         | TypeAlias tuple -> failwith "todo"
         | Extension tuple -> failwith "todo"
 
