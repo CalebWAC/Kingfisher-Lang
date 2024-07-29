@@ -82,15 +82,16 @@ let (.>>.) = andThen
 let orElse p1 p2 =
     let label = $"{p1.label} or else {p2.label}"
     let createParser input =
-            let result1 = run p1 input
+        let result1 = run p1 input
 
-            match result1 with
-            | Success result -> Success result
-            | Failure _ ->
-                let result2 = run p2 input
-
-                result2
-    
+        match result1 with
+        | Success result ->
+            Success result
+        | Failure _ ->
+            let result2 = run p2 input
+            
+            result2
+        
     { parseFunc = createParser; label = label }
     
 let (<|>) = orElse
@@ -126,7 +127,7 @@ let rec sequence parsers =
     match parsers with
     | [] -> returnP []
     | head::tail ->
-        consP head (sequence tail)
+        consP head (sequence tail) 
 
 let rec parseZeroOrMore parser input =
     let result = run parser input
@@ -162,7 +163,22 @@ let opt p =
 // AndThen with result ignoring
 let (.>>) p1 p2 = p1 .>>. p2 |>> fst
 let (>>.) p1 p2 = p1 .>>. p2 |>> snd
-     
+
+/// To be used to fix recursion errors
+(*let parserToRef<'a>() =
+    let midParser =
+        let createParser _ =
+            failwith "unimplemented forwarded parser"
+        { parseFunc = createParser; label = "unknown" }
+    
+    let parserRef = ref midParser
+    
+    let createParser input =
+        run parserRef.Value input
+    let wrapper = { parseFunc = createParser; label = "unknown" }
+    
+    wrapper, parserRef *)
+
 let between p1 p2 p3 = p1 >>. p2 .>> p3
 
 let sepBy1 p sep =

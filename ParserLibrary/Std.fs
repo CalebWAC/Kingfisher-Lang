@@ -211,20 +211,22 @@ and recordLit() = between (pchar '{')
                     (pchar '}') |>> RecordLiteral <?> "record"
 
 
-let statement, binding, expression, typeDeclaration, reassignment =
-    let rec statement () = (binding() <|> (expression() |>> Statement.Expression) <|> typeDeclaration) <?> "statement"
+let statement, binding, expression, typeDeclaration, functionBinding =
+    let rec statement () = choice [ binding(); expression() |>> Statement.Expression; typeDeclaration ] <?> "statement"
 
     //// Bindings \\\\
-    and immutableBinding = keyword "let" >>. ws >>. identifier .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>>. expr() |>> ImmutableBinding
-    and mutableBinding = keyword "var" >>. ws >>. identifier .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>>. expr() |>> MutableBinding
-    and reassignment = (dataAccessExpr() <|> (identifier |>> IdentifierExpr)) .>> ws .>> keyword "<-" .>>. opt binaryArithOp .>> ws .>>. expr() |>> Reassignment
+    and immutableBinding() = keyword "let" >>. ws >>. identifier .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>>. expr() |>> ImmutableBinding
+    and mutableBinding() = keyword "var" >>. ws >>. identifier .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>>. expr() |>> MutableBinding
+    and reassignment() = (dataAccessExpr() <|> (identifier |>> IdentifierExpr)) .>> ws .>> keyword "<-" .>>. opt binaryArithOp .>> ws .>>. expr() |>> Reassignment
 
-    and entityBinding = keyword "ent" >>. ws >>. identifier .>> ws .>> pchar '=' .>> ws .>>. sepBy1 identifier ws1 |>> EntityBinding
+    and entityBinding() = keyword "ent" >>. ws >>. identifier .>> ws .>> pchar '=' .>> ws .>>. sepBy1 identifier ws1 |>> EntityBinding
     
-    and parameter = (pchar '(' >>. ws >>. ((opt identifier .>> ws .>>. identifier) <|> (opt (keyword "~") .>>. identifier)) .>> ws .>>. opt explicitType .>> ws .>> pchar ')' |>> Specified) <|> (identifier |>> Unspecified) .>> ws <?> "parameter"
-    and functionBinding() = keyword "fun" >>. ws >>. identifier .>> ws .>>. many parameter .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>. many1 (statement()) .>> ws .>> pchar '}' |>> FunctionDeclaration
+    and parameter() = (pchar '(' >>. ws >>. ((opt identifier .>> ws .>>. identifier) <|> (opt (keyword "~") .>>. identifier)) .>> ws .>>. opt explicitType .>> ws .>> pchar ')' |>> Specified) <|> (identifier |>> Unspecified) .>> ws <?> "parameter"
+    and functionBinding() = keyword "fun" >>. ws >>. identifier .>> ws .>>. many (parameter()) .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>.
+                            many1 ((expr() |>> Expression |>> Statement.Expression) <|> binding())
+                            .>> ws .>> pchar '}' |>> FunctionDeclaration
 
-    and binding() = (immutableBinding <|> mutableBinding <|> entityBinding <|> functionBinding() <|> reassignment) |>> Binding <?> "binding"
+    and binding() = choice [immutableBinding(); mutableBinding(); entityBinding(); functionBinding(); reassignment()] |>> Binding <?> "binding"
     
     
     //// Control Flow Expressions \\\\
@@ -241,7 +243,7 @@ let statement, binding, expression, typeDeclaration, reassignment =
     and whileExpr() = keyword "while" >>. ws >>. expr() .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (expressionWhile() .>> ws) .>> pchar '}' |>> WhileExpr <?> "while loop"
     and matchExpr() = keyword "when" >>. ws >>. identifier .>> ws .>> keyword "is" .>> ws .>> pchar '{' .>> ws .>>. many1 (expr() .>> ws .>> keyword "->" .>> ws .>>. many1 (expressionMatch()) .>> ws) .>> ws .>> pchar '}' |>> MatchExpr <?> "match"
 
-    and expression() = ifExpr() <|> forExpr() <|> whileExpr() <|> matchExpr() <|> (expr() |>> Expression) <?> "higher expression"
+    and expression() = choice [ ifExpr(); forExpr(); whileExpr(); matchExpr(); expr() |>> Expression ] <?> "higher expression"
 
     
     // Type Declarations
@@ -271,8 +273,8 @@ let statement, binding, expression, typeDeclaration, reassignment =
                             SystemDeclaration((coms, systemType), expr)
 
     
-    and typeDeclaration = unionDeclaration <|> recordDeclaration <|> componentDeclaration <|> systemBinding |>> TypeDeclaration
+    and typeDeclaration = choice [ unionDeclaration; recordDeclaration; componentDeclaration; systemBinding ] |>> TypeDeclaration
     
-    statement, binding, expression, typeDeclaration, reassignment
+    statement, binding, expression, typeDeclaration, functionBinding()
 
 let parseProgram = ws >>. sepBy1 (statement()) ws
