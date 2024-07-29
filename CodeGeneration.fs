@@ -129,15 +129,36 @@ let rec generateStatement stat =
             output.WriteLine($"function {iden}({param[..param.Length - 3]}) : {fst (snd SemanticAnalysis.functions[iden])}" + "{")
             for expr in exprs do
                 if List.findIndex (fun e -> e = expr) exprs = exprs.Length - 1 then output.Write("return ")
-                generateExpr expr
+                generateStatement expr
                 output.WriteLine(";")
             output.WriteLine("}")
-        | Reassignment (iden, expr) ->
+        | Reassignment ((iden, op), expr) ->
+            let iden = match iden with
+                       | IdentifierExpr s -> s
+                       | DataAccessExpr(s, s1) -> $"{s}.{s1}"
+                       | _ -> ""
+            
             output.Write($"{iden} = ")
-            generateExpr expr
-            output.WriteLine(";")
+            
+            
+            if op.IsSome && op.Value = Exp then
+                output.Write($"Math.pow({iden}, ")
+                generateExpr expr
+                output.Write(");")
+            else
+                if op.IsSome then
+                    output.Write($"{iden} ")
+                    output.Write(match op.Value with
+                                 | Add -> "+"
+                                 | Sub -> "-"
+                                 | Mul -> "*"
+                                 | Div -> "/"
+                                 | Mod -> "%"
+                                 | _ -> "")
+                
+                generateExpr expr
+                output.WriteLine(";")
         | EntityBinding _ -> ()
-        | SystemDeclaration _ -> ()
     | Statement.Expression expr ->
         match expr with
         | IfExpr ((i, ei), e) ->
@@ -229,6 +250,7 @@ let generateType statement =
                     output.WriteLine(");")
             output.WriteLine("}\n")
         | ComponentDeclaration tuple -> failwith "todo"
+        | SystemDeclaration _ -> ()
         | TypeAlias tuple -> failwith "todo"
         | Extension tuple -> failwith "todo"
     | _ -> ()

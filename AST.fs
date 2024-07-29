@@ -14,20 +14,19 @@ and Binding =
     | MutableBinding of MutableBinding
     | FunctionDeclaration of FunctionDeclaration
     | EntityBinding of EntityBinding
-    | SystemDeclaration of SystemDeclaration
     | Reassignment of Reassignment
 
 and ImmutableBinding = (Identifier * Type option) * Expression
 and MutableBinding = (Identifier * Type option) * Expression
-and Reassignment = Expression (* * BinaryArithmeticOperator option *) * Expression
+and Reassignment = (Expression * BinaryArithmeticOperator option) * Expression
 
 and Parameter =
     | Unspecified of Identifier
     | Specified of (Identifier option * Identifier) * Type option 
-and FunctionDeclaration = ((Identifier * Parameter list) * Type option) * Expression list
+and FunctionDeclaration = ((Identifier * Parameter list) * Type option) * Statement list
 
 and EntityBinding = Identifier * Identifier list
-and SystemDeclaration = (Identifier list * SystemClassification) * Expression list // change
+and SystemDeclaration = (Identifier list * SystemClassification) * Statement list
 
 and SystemClassification =
     | Awake
@@ -39,6 +38,7 @@ and TypeDeclaration =
     | RecordDeclaration of RecordDeclaration
     | UnionDeclaration of UnionDeclaration
     | ComponentDeclaration of ComponentDeclaration
+    | SystemDeclaration of SystemDeclaration
     | TypeAlias of TypeAlias
     | Extension of Extension
 

@@ -128,10 +128,16 @@ let rec validateStatement statement =
                                      constants.Add(iden, typOpt)
                                      yield typOpt
                         ]
-            for e in snd func do traverse e |> ignore
+            for e in snd func do validateStatement e
             let retType = match snd (fst func) with
                           | Some ret -> ret
-                          | None -> (snd func)[(snd func).Length - 1] |> traverse |> snd
+                          | None ->
+                              match (snd func)[(snd func).Length - 1] with
+                              | Statement.Expression e ->
+                                  match e with
+                                  | Expression e -> traverse e |> snd
+                                  | _ -> printfn "Must end function with expression"; Type(Void, None)
+                              | _ -> printfn "Must end function with expression"; Type(Void, None)
             
             functions.Add(fst (fst (fst func)), (Seq.toList param, retType))
             for x in snd(fst (fst func)) do
@@ -141,30 +147,28 @@ let rec validateStatement statement =
                 | Specified ((_, iden), _) ->
                     constants.Remove(iden) |> ignore
         | Reassignment res ->
-            match fst res with
-            | IdentifierExpr s ->
-                if variables.ContainsKey(s) |> not then
-                    if constants.ContainsKey(s) then
-                        printfn $"{s} is not mutable"
-                    else printfn $"{s} does not exist"
-            | DataAccessExpr(s, _) ->
-                if variables.ContainsKey(s) |> not then
-                    if constants.ContainsKey(s) then
-                        printfn $"{s} is not mutable"
-                    else printfn $"{s} does not exist"
-                else
-                    fst res |> traverse |> ignore
-            | _ -> ()
+            let varType = match fst (fst res) with
+                          | IdentifierExpr s ->
+                                if variables.ContainsKey(s) |> not then
+                                    if constants.ContainsKey(s) then
+                                        printfn $"{s} is not mutable"
+                                    else printfn $"{s} does not exist"
+                                    Type(Void, None)
+                                else variables[s].Value
+                          | DataAccessExpr(s, _) ->
+                                if activeComponents.Contains(s) |> not &&  variables.ContainsKey(s) |> not then
+                                    if constants.ContainsKey(s) then
+                                        printfn $"{s} is not mutable"
+                                    else printfn $"{s} does not exist"
+                                    Type(Void, None)
+                                else
+                                    fst (fst res) |> traverse |> snd
+                          | _ -> Type(Void, None)
             
-            snd res |> traverse |> ignore
+            let value = snd res |> traverse |> snd
+            if value <> varType then printfn $"Type {fst value} is not equal to {fst varType}"
         | EntityBinding (_, coms) ->
             coms |> List.iter (fun c -> if components.ContainsKey(c) |> not then printfn $"Component {c} does not exist" )
-        | SystemDeclaration ((coms, _), exprs) ->
-            coms |> List.iter (fun c ->
-                if components.ContainsKey(c) |> not then printfn $"Component {c} does not exist"
-                else activeComponents.Add(c))
-            for e in exprs do
-                traverse e |> ignore
     | Statement.Expression expr ->
         match expr with
         | ForExpr ((((_, iden), e), _), exprs) ->
@@ -212,6 +216,13 @@ let rec validateStatement statement =
             components.Add(iden, Some members)
             for _, typ in members do
                 checkType typ
+        | SystemDeclaration ((coms, _), exprs) ->
+            coms |> List.iter (fun c ->
+                if components.ContainsKey(c) |> not then printfn $"Component {c} does not exist"
+                else activeComponents.Add(c))
+            for e in exprs do
+                validateStatement e
+            for c in coms do activeComponents.Remove(c) |> ignore
         | TypeAlias tuple -> failwith "todo"
         | Extension tuple -> failwith "todo"
 
@@ -222,6 +233,6 @@ let analyze ast =
             validateStatement statement
     | Failure _ -> ()
     
-    for i in constants do printf $"{i}\t"
+    // for i in constants do printf $"{i}\t"
     //printfn ""
     //for i in functions do printf $"{i}\t"

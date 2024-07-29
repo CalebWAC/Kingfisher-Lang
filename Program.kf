@@ -1,15 +1,4 @@
-type Vec3 = { var x: float, var y: float, var z: float }
+fun add a b = a + b
 
-com Transform = {
-    position: Vec3
-    rotation: Vec3
-    scale: Vec3
-}
-
-com Player = { name: string }
-
-ent player = Transform Player
-
-sys Transform Player | Update = {
-    Transform.position + 1
-}
+let added = add 3 4
+println added
