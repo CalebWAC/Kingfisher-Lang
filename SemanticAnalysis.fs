@@ -57,7 +57,8 @@ let rec traverse expr =
             if functions.ContainsKey(iden) then
                 let callValid = exprs 
                                 |> List.forall (fun expr ->
-                                    snd (traverse expr) = ((fst(functions[iden]))[exprs |> List.findIndex (fun e -> e = expr)]).Value)
+                                    try snd (traverse expr) = ((fst(functions[iden]))[exprs |> List.findIndex (fun e -> e = expr)]).Value
+                                    with | _ -> true)
                 (callValid, (snd functions[iden]))
             else (true, unionValues[iden])
     | ArrayExpr (iden, _) ->
@@ -121,7 +122,7 @@ let rec validateStatement statement =
             let param = [ for x in snd (fst (fst func)) do
                                  match x with
                                  | Unspecified iden ->
-                                     constants.Add(iden, None)
+                                     constants.Add(iden, Type(Void, None) |> Some)
                                      yield None
                                  | Specified ((_, iden), typOpt) ->
                                      checkType typOpt.Value

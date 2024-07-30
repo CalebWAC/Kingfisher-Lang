@@ -126,11 +126,10 @@ let rec generateStatement stat =
                                 | Unspecified iden -> $"{iden}, "
                                 | Specified ((_, iden), typ) -> $"{iden}: {fst typ.Value},"
                             } |> List.ofSeq |> string |> String.filter (fun c -> c <> ';' && c <> '[') 
-            output.WriteLine($"function {iden}({param[..param.Length - 3]}) : {fst (snd SemanticAnalysis.functions[iden])}" + "{")
+            output.WriteLine($"function {iden}({param[..param.Length - 4]})" + "{") //  : {fst (snd SemanticAnalysis.functions[iden])}
             for expr in exprs do
                 if List.findIndex (fun e -> e = expr) exprs = exprs.Length - 1 then output.Write("return ")
                 generateStatement expr
-                output.WriteLine(";")
             output.WriteLine("}")
         | Reassignment ((iden, op), expr) ->
             let iden = match iden with
@@ -169,7 +168,6 @@ let rec generateStatement stat =
             output.WriteLine($"{expr}) " + "{")
             for e in snd i do
                 generateStatement e
-                output.Write(";")
             output.WriteLine("}")
             
             if ei.IsSome then
@@ -181,14 +179,12 @@ let rec generateStatement stat =
                     output.WriteLine($"{expr}) " + "{")
                     for e in snd els do
                         generateStatement e
-                        output.Write(";")
                     output.WriteLine("}")
                     
             if e.IsSome then
                 output.Write("else {")
                 for ex in e.Value do
                     generateStatement ex
-                    output.Write(";")
                 output.WriteLine("}")
         | ForExpr ((((_, iden), expr), _), stats) ->
             output.Write($"for ({iden} in ")

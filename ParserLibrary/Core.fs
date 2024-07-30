@@ -165,7 +165,7 @@ let (.>>) p1 p2 = p1 .>>. p2 |>> fst
 let (>>.) p1 p2 = p1 .>>. p2 |>> snd
 
 /// To be used to fix recursion errors
-(*let parserToRef<'a>() =
+let parserToRef() =
     let midParser =
         let createParser _ =
             failwith "unimplemented forwarded parser"
@@ -177,7 +177,7 @@ let (>>.) p1 p2 = p1 .>>. p2 |>> snd
         run parserRef.Value input
     let wrapper = { parseFunc = createParser; label = "unknown" }
     
-    wrapper, parserRef *)
+    wrapper, parserRef
 
 let between p1 p2 p3 = p1 >>. p2 .>> p3
 
