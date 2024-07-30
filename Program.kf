@@ -1,11 +1,16 @@
-for i in 0..20 do {
-    if i % 3 = 0 && i % 5 = 0 then {
-        println 'FizzBuzz'
-    } elif i % 3 = 0 then {
-        println 'Fizz'
-    } elif i % 5 = 0 then {
-        println 'Buzz'
-    } else { println i }
-
+com Transform = {
+    position: Vec3
+    rotation: Vec3
+    scale: Vec3
 }
-        
+
+com Player = { name: string }
+
+ent player = Transform {position = {x = 0, y = 0, z = 0},
+                        rotation = {x = 0, y = 0, z = 0},
+                        scale= {x = 0, y = 0, z = 0}} 
+             Player
+
+sys Transform Player | Update = {
+    Transform.position <-+ 1
+}

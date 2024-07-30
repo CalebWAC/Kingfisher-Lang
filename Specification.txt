@@ -136,7 +136,10 @@ for i in 1..10 where i % 2 = 0 do ()
 //// ECS \\\\
 
 // Entities
-ent player = Transform PlayerController // entity creation
+ent player = Transform {position = {x = 0, y = 0, z = 0},
+			rotation = {x = 0, y = 0, z = 0},
+			scale= {x = 0, y = 0, z = 0}}
+             PlayerController // entity creation
 ent 10 = Transform Collider // anonymous entity creation
 
 // Components

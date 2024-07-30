@@ -25,7 +25,7 @@ and Parameter =
     | Specified of (Identifier option * Identifier) * Type option 
 and FunctionDeclaration = ((Identifier * Parameter list) * Type option) * Statement list
 
-and EntityBinding = Identifier * Identifier list
+and EntityBinding = Identifier * (Identifier * Expression option) list
 and SystemDeclaration = (Identifier list * SystemClassification) * Statement list
 
 and SystemClassification =

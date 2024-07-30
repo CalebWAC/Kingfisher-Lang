@@ -135,7 +135,7 @@ let typeKeyWord = identifier .>> ws .>>. opt (keyword "array" <|> keyword "set")
 let explicitType = pchar ':' >>. ws >>. typeKeyWord <?> "explicit type"
 
 let rec literal () = floatLit <|> intLit <|> stringLit <|> boolLit <|> runeLit <|>
-                     (arrayLit |>> CollectionLiteral) <|> (mapLit |>> CollectionLiteral) // <|> recordLit <|> tupleLit
+                     (arrayLit |>> CollectionLiteral) <|> (mapLit |>> CollectionLiteral) //<|> recordLit <|> tupleLit
                      |>> LiteralExpr <?> "literal"
 
 and arrayLit = opt (keyword "set") .>> ws .>>. between (pchar '[')
@@ -153,6 +153,7 @@ and tupleLit = between (pchar '(')
                     (sepBy1 (literal()) (pchar ',' .>> ws))
                     (pchar ')') |>> TupleLiteral <?> "tuple"
 
+let recordLit, recordLitRef = parserToRef()
 
 //// Operators \\\\
 let unaryOp =
@@ -185,46 +186,44 @@ let binaryLogOp =
 
 
 //// Expressions \\\\
-let rec expr () = ((binaryCompExpr .>> ws .>>. binaryLogOp .>> ws .>>. binaryCompExpr) |>> BinaryLogicalExpr <|> binaryCompExpr) //<?> "expression"
-
-and arrayExpr() = identifier .>> ws .>>. between (pchar '[') (literal() <|> (identifier |>> IdentifierExpr)) (pchar ']') |>> ArrayExpr <?> "array access"
-and dataAccessExpr() = identifier .>> pchar '.' .>>. identifier |>> DataAccessExpr <?> "data access"
-and componentAccessExpr() = identifier .>> pchar '@' .>>. identifier |>> ComponentAccessExpr <?> "component access"
-and accessExpr() = range <|>
+let arrayExpr = identifier .>> ws .>>. between (pchar '[') (literal() <|> (identifier |>> IdentifierExpr)) (pchar ']') |>> ArrayExpr <?> "array access"
+let dataAccessExpr = identifier .>> pchar '.' .>>. identifier |>> DataAccessExpr <?> "data access"
+let componentAccessExpr = identifier .>> pchar '@' .>>. identifier |>> ComponentAccessExpr <?> "component access"
+let accessExpr = range <|>
                    literal() <|>
-                   (recordLit() |>> LiteralExpr) <|>
-                   arrayExpr() <|>
-                   dataAccessExpr() <|>
-                   componentAccessExpr() <|>
+                   (recordLit |>> LiteralExpr) <|>
+                   arrayExpr <|>
+                   dataAccessExpr <|>
+                   componentAccessExpr <|>
                    (identifier |>> IdentifierExpr) <?> "access expr"
 
-and funcExpr() = identifier .>> ws1 .>>. sepBy1 (accessExpr()) ws1NoNl |>> FunctionCallExpr <|> accessExpr() <?> "function call"
-and unaryExpr = (unaryOp .>>. funcExpr()) |>> UnaryExpr <|> funcExpr() <?> "unary expression"
-and binaryArithExpr = (unaryExpr .>> ws .>>. binaryArithOp .>> ws .>>. unaryExpr) |>> BinaryArithmeticExpr <|> unaryExpr <?> "binaryArth expr"
-and binaryCompExpr = (binaryArithExpr .>> ws .>>. binaryCompOp .>> ws .>>. binaryArithExpr) |>> BinaryComparisonExpr <|> binaryArithExpr <?> "binaryComp expr"
+let funcExpr() = identifier .>> ws1 .>>. sepBy1 accessExpr ws1NoNl |>> FunctionCallExpr <|> accessExpr <?> "function call"
+let unaryExpr = (unaryOp .>>. funcExpr()) |>> UnaryExpr <|> funcExpr() <?> "unary expression"
+let binaryArithExpr = (unaryExpr .>> ws .>>. binaryArithOp .>> ws .>>. unaryExpr) |>> BinaryArithmeticExpr <|> unaryExpr <?> "binaryArth expr"
+let binaryCompExpr = (binaryArithExpr .>> ws .>>. binaryCompOp .>> ws .>>. binaryArithExpr) |>> BinaryComparisonExpr <|> binaryArithExpr <?> "binaryComp expr"
 
-and rae() = range <|> literal() <|> arrayExpr() <|> dataAccessExpr() <|> componentAccessExpr() <|> (identifier |>> IdentifierExpr) <?> "access expr"
-and ferl() = identifier .>> ws1 .>>. sepBy1 (rae()) ws1NoNl |>> FunctionCallExpr <|> (rae()) <?> "function call"
-and recordLit() = between (pchar '{')
-                    (ws >>. opt (identifier .>> ws .>> keyword "with") .>> ws .>>.
-                     (sepBy1 (identifier .>> ws .>> pchar '=' .>> ws .>>. (ferl()) .>> ws) (pchar ',' .>> ws)))
-                    (pchar '}') |>> RecordLiteral <?> "record"
+let expr = ((binaryCompExpr .>> ws .>>. binaryLogOp .>> ws .>>. binaryCompExpr) |>> BinaryLogicalExpr <|> binaryCompExpr) <?> "expression"
+
+recordLitRef.Value <- between (pchar '{')
+                        (ws >>. opt (identifier .>> ws .>> keyword "with") .>> ws .>>.
+                         (sepBy1 (identifier .>> ws .>> pchar '=' .>> ws .>>. expr .>> ws) (pchar ',' .>> ws)))
+                        (pchar '}') |>> RecordLiteral <?> "record"
 
 
 let statement, binding, expression, typeDeclaration =
     //// Bindings \\\\
-    let immutableBinding = keyword "let" >>. ws >>. identifier .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>>. expr() |>> ImmutableBinding
-    let mutableBinding = keyword "var" >>. ws >>. identifier .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>>. expr() |>> MutableBinding
-    let reassignment = (dataAccessExpr() <|> (identifier |>> IdentifierExpr)) .>> ws .>> keyword "<-" .>>. opt binaryArithOp .>> ws .>>. expr() |>> Reassignment
+    let immutableBinding = keyword "let" >>. ws >>. identifier .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>>. expr |>> ImmutableBinding
+    let mutableBinding = keyword "var" >>. ws >>. identifier .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>>. expr |>> MutableBinding
+    let reassignment = (dataAccessExpr <|> (identifier |>> IdentifierExpr)) .>> ws .>> keyword "<-" .>>. opt binaryArithOp .>> ws .>>. expr |>> Reassignment
 
-    let entityBinding = keyword "ent" >>. ws >>. identifier .>> ws .>> pchar '=' .>> ws .>>. sepBy1 identifier ws1 |>> EntityBinding
+    let entityBinding = keyword "ent" >>. ws >>. identifier .>> ws .>> pchar '=' .>> ws .>>. sepBy1 (identifier .>> ws .>>. opt expr) ws1 |>> EntityBinding
     
     let parameter = (pchar '(' >>. ws >>. ((opt identifier .>> ws .>>. identifier) <|> (opt (keyword "~") .>>. identifier)) .>> ws .>>. opt explicitType .>> ws .>> pchar ')' |>> Specified) <|> (identifier |>> Unspecified) .>> ws <?> "parameter"
     let functionBinding, funcBindRef = parserToRef()         
 
     let binding = choice [immutableBinding; mutableBinding; entityBinding; functionBinding; reassignment] |>> Binding <?> "binding"
 
-    let ifCond = (expr() |>> IfCondition.Expr) <|> (keyword "let" >>. ws >>. identifier .>> ws .>> pchar '=' .>>. expr() |>> LetStatement)
+    let ifCond = (expr |>> IfCondition.Expr) <|> (keyword "let" >>. ws >>. identifier .>> ws .>> pchar '=' .>>. expr |>> LetStatement)
     let ifExpress, ifExpressRef = parserToRef() 
     let ifExpr, ifExprRef = parserToRef() 
 
@@ -232,7 +231,7 @@ let statement, binding, expression, typeDeclaration =
     let whileExpr, whileExprRef = parserToRef()
     let matchExpr, matchExprRef = parserToRef()
 
-    let expression = choice [ ifExpr; forExpr; whileExpr; matchExpr; expr() |>> Expression ] <?> "higher expression"
+    let expression = choice [ ifExpr; forExpr; whileExpr; matchExpr; expr |>> Expression ] <?> "higher expression"
 
     
     // Type Declarations
@@ -261,11 +260,11 @@ let statement, binding, expression, typeDeclaration =
     
     // Fixing references
     funcBindRef.Value <- keyword "fun" >>. ws >>. identifier .>> ws .>>. many parameter .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> ws .>> pchar '}' |>> FunctionDeclaration
-    ifExpressRef.Value <- ifCond .>> ws .>>. opt (keyword "where" >>. ws >>. expr()) .>> ws .>> keyword "then" .>> ws .>> keyword "{" .>> ws .>>. many1 (statement .>> ws) .>> pchar '}' |>> IfExpress
+    ifExpressRef.Value <- ifCond .>> ws .>>. opt (keyword "where" >>. ws >>. expr) .>> ws .>> keyword "then" .>> ws .>> keyword "{" .>> ws .>>. many1 (statement .>> ws) .>> pchar '}' |>> IfExpress
     ifExprRef.Value <- keyword "if" >>. ws >>. ifExpress .>> ws .>>. opt(many1 (keyword "elif" >>. ifExpress .>> ws)) .>> ws .>>. opt (keyword "else" >>. ws >>. pchar '{' >>. ws >>. many1 (statement .>> ws) .>> pchar '}') |>> IfExpr <?> "if"
-    forExprRef.Value <- opt (identifier .>> pchar '@') .>> ws .>> keyword "for" .>> ws .>>. identifier .>> ws .>> keyword "in" .>> ws .>>. expr() .>> ws .>>. opt (keyword "where" >>. ws >>. expr()) .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> pchar '}' |>> ForExpr <?> "for loop"
-    whileExprRef.Value <- keyword "while" >>. ws >>. expr() .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> pchar '}' |>> WhileExpr <?> "while loop"
-    matchExprRef.Value <- keyword "when" >>. ws >>. identifier .>> ws .>> keyword "is" .>> ws .>> pchar '{' .>> ws .>>. many1 (expr() .>> ws .>> keyword "->" .>> ws .>>. many1 (statement .>> ws)) .>> ws .>> pchar '}' |>> MatchExpr <?> "match"
+    forExprRef.Value <- opt (identifier .>> pchar '@') .>> ws .>> keyword "for" .>> ws .>>. identifier .>> ws .>> keyword "in" .>> ws .>>. expr .>> ws .>>. opt (keyword "where" >>. ws >>. expr) .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> pchar '}' |>> ForExpr <?> "for loop"
+    whileExprRef.Value <- keyword "while" >>. ws >>. expr .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> pchar '}' |>> WhileExpr <?> "while loop"
+    matchExprRef.Value <- keyword "when" >>. ws >>. identifier .>> ws .>> keyword "is" .>> ws .>> pchar '{' .>> ws .>>. many1 (expr .>> ws .>> keyword "->" .>> ws .>>. many1 (statement .>> ws)) .>> ws .>> pchar '}' |>> MatchExpr <?> "match"
     
     sysBindRef.Value <- keyword "sys" >>. ws >>. sepBy1 identifier ws .>> ws .>>. opt (pchar '|' >>. ws >>. identifier .>> ws) .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>. many1 statement .>> ws .>> pchar '}'
                         |>> fun ((coms, sys), expr) ->

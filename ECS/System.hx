@@ -25,4 +25,12 @@ class SystemManager {
             system.run();
         }
     }
+    
+    public function run() {
+        while (true) {
+            for (system in systems) {
+                if (system.type == Update) system.run();
+            }
+        }
+    }
 }

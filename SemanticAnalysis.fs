@@ -9,6 +9,7 @@ let variables = Dictionary<string, Type option>()
 
 let unionValues = Dictionary<string, Type>()
 let customTypes = Dictionary<string, (string * Type) list option>()
+customTypes.Add("Vec3", Some ["x", Type(Float, None); "y", Type(Float, None); "z", Type(Float, None)])
 
 let components = Dictionary<string,  (string * Type) list option>()
 let activeComponents = List<string>()
@@ -169,7 +170,7 @@ let rec validateStatement statement =
             let value = snd res |> traverse |> snd
             if value <> varType then printfn $"Type {fst value} is not equal to {fst varType}"
         | EntityBinding (_, coms) ->
-            coms |> List.iter (fun c -> if components.ContainsKey(c) |> not then printfn $"Component {c} does not exist" )
+            coms |> List.iter (fun (iden, data) -> if components.ContainsKey(iden) |> not then printfn $"Component {iden} does not exist" )
     | Statement.Expression expr ->
         match expr with
         | ForExpr ((((_, iden), e), _), exprs) ->

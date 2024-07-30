@@ -9,7 +9,7 @@ let standardLibrary = "
     static function print(str: Any) { Sys.print(str); }
 "
     
-let output = new StreamWriter("Main.hx")
+let output = new StreamWriter("../../../ECS/Main.hx")
     
 let rec generateExpr expr =
     match expr with
@@ -157,7 +157,14 @@ let rec generateStatement stat =
                 
                 generateExpr expr
                 output.WriteLine(";")
-        | EntityBinding _ -> ()
+        | EntityBinding (iden, coms) ->
+            output.Write("EntityManager.addEntity([")
+            for c in coms do
+                output.Write($"new {fst c}(")
+                if (snd c).IsSome then generateExpr (snd c).Value
+                output.Write(")")
+                if List.findIndex (fun e -> e = c) coms <> coms.Length - 1 then output.Write(",")
+            output.WriteLine("]);")
     | Statement.Expression expr ->
         match expr with
         | IfExpr ((i, ei), e) ->
@@ -245,7 +252,17 @@ let generateType statement =
                         if List.findIndex (fun ty -> ty = t) types <> types.Length - 1 then output.Write(", ")
                     output.WriteLine(");")
             output.WriteLine("}\n")
-        | ComponentDeclaration tuple -> failwith "todo"
+        | ComponentDeclaration (iden, data) ->
+            output.WriteLine($"class {iden} extends Component " + "{")
+            
+            let dataType =
+                data
+                |> List.map (fun (iden, typ) -> $"{iden}: {typ}, ")
+                |> List.reduce (+)
+                |> string
+            
+            output.WriteLine("\tpublic var data : {" + dataType[..dataType.Length - 2] + "};")
+            output.WriteLine("}\n")
         | SystemDeclaration _ -> ()
         | TypeAlias tuple -> failwith "todo"
         | Extension tuple -> failwith "todo"
@@ -254,6 +271,9 @@ let generateType statement =
 let generate code =
     match code with
     | Success (ast, _) ->
+        output.WriteLine("import Entity; import System;")
+        output.WriteLine("typedef Vec3 = { x: Float, y: Float, z: Float}")
+        
         for statement in ast do
             generateType statement
         

@@ -1,6 +1,4 @@
-typedef Vec3 = { x: Float, y: Float, z: Float}
-
-typedef Component = {}
+class Component {}
 
 class EntityManager {
     static public var entities : Array<Array<Component>> = [];
