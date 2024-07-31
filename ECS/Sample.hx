@@ -1,4 +1,4 @@
-import Entity;
+/* import Entity;
 import System;
 
 typedef Vec3 = { x: Float, y: Float, z: Float}
@@ -37,4 +37,4 @@ class Main {
 
         systems.run();
     }
-}
+} */

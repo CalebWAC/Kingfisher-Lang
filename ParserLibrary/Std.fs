@@ -187,7 +187,7 @@ let binaryLogOp =
 
 //// Expressions \\\\
 let arrayExpr = identifier .>> ws .>>. between (pchar '[') (literal() <|> (identifier |>> IdentifierExpr)) (pchar ']') |>> ArrayExpr <?> "array access"
-let dataAccessExpr = identifier .>> pchar '.' .>>. identifier |>> DataAccessExpr <?> "data access"
+let dataAccessExpr, dataExRef = parserToRef()
 let componentAccessExpr = identifier .>> pchar '@' .>>. identifier |>> ComponentAccessExpr <?> "component access"
 let accessExpr = range <|>
                    literal() <|>
@@ -208,7 +208,7 @@ recordLitRef.Value <- between (pchar '{')
                         (ws >>. opt (identifier .>> ws .>> keyword "with") .>> ws .>>.
                          (sepBy1 (identifier .>> ws .>> pchar '=' .>> ws .>>. expr .>> ws) (pchar ',' .>> ws)))
                         (pchar '}') |>> RecordLiteral <?> "record"
-
+dataExRef.Value <- identifier .>> pchar '.' .>>. expr |>> DataAccessExpr <?> "data access"
 
 let statement, binding, expression, typeDeclaration =
     //// Bindings \\\\
@@ -266,7 +266,7 @@ let statement, binding, expression, typeDeclaration =
     whileExprRef.Value <- keyword "while" >>. ws >>. expr .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> pchar '}' |>> WhileExpr <?> "while loop"
     matchExprRef.Value <- keyword "when" >>. ws >>. identifier .>> ws .>> keyword "is" .>> ws .>> pchar '{' .>> ws .>>. many1 (expr .>> ws .>> keyword "->" .>> ws .>>. many1 (statement .>> ws)) .>> ws .>> pchar '}' |>> MatchExpr <?> "match"
     
-    sysBindRef.Value <- keyword "sys" >>. ws >>. sepBy1 identifier ws .>> ws .>>. opt (pchar '|' >>. ws >>. identifier .>> ws) .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>. many1 statement .>> ws .>> pchar '}'
+    sysBindRef.Value <- keyword "sys" >>. ws >>. sepBy1 identifier ws .>> ws .>>. opt (pchar '|' >>. ws >>. identifier .>> ws) .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> ws .>> pchar '}'
                         |>> fun ((coms, sys), expr) ->
                             let systemType = match sys with
                                              | None -> Start

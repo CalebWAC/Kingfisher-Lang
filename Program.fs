@@ -1,6 +1,7 @@
 ﻿open System.IO
 open ParserLibrary.Core
 open ParserLibrary.Std
+open System.Diagnostics
 
 [<EntryPoint>]
 let main loc =
@@ -16,6 +17,10 @@ let main loc =
     CodeGeneration.generate ast
     
     //printfn "\n\n"
-    System.Diagnostics.Process.Start("cmd.exe", "/C haxe --main \"../../../ECS/Main.hx\" --interp") |> ignore
+    let mutable startInfo = ProcessStartInfo()
+    startInfo.FileName <- "cmd.exe"
+    startInfo.WorkingDirectory <- "F:\Kingfisher Language\ECS"
+    startInfo.Arguments <- "/C haxe --main Main.hx --interp"
+    Process.Start(startInfo) |> ignore
     
     0

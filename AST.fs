@@ -122,7 +122,7 @@ and Expression =
     | IdentifierExpr of Identifier
     | FunctionCallExpr of Identifier * Expression list
     | ArrayExpr of Identifier * Expression
-    | DataAccessExpr of Identifier * Identifier
+    | DataAccessExpr of Identifier * Expression
     | ComponentAccessExpr of Identifier * Identifier
     | RangeExpr of (Expression * RangeType) * Expression
     | LiteralExpr of Literal

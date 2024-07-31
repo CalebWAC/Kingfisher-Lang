@@ -6,13 +6,18 @@ open ParserLibrary.Core
 open System.Collections.Generic
     
 let standardLibrary = "
-    static function println(str: Any) { Sys.println(str); }
-    static function print(str: Any) { Sys.print(str); }
+    typedef Vec3 = { x: Float, y: Float, z: Float}
+    
+    class Standard {
+        public static function println(str: Any) { Sys.println(str); }
+        public static function print(str: Any) { Sys.print(str); }
+    }
 "
     
 let output = new StreamWriter("../../../ECS/Main.hx")
     
 let activeComponents = List<string>()
+let systems = List<string>()
     
 let rec generateExpr expr =
     match expr with
@@ -59,6 +64,7 @@ let rec generateExpr expr =
         generateExpr expr
     | IdentifierExpr iden -> output.Write(iden)
     | FunctionCallExpr (iden, exprs) ->
+        if iden = "println" then output.Write("Standard.")
         output.Write($"{iden}(")
         for e in exprs do
             generateExpr e
@@ -70,8 +76,11 @@ let rec generateExpr expr =
         output.Write("]")
     | DataAccessExpr (iden1, iden2) ->
         if activeComponents.Contains(iden1) then
-            output.Write($"coms[{activeComponents.IndexOf(iden1)}].data.{iden2}")
-        else output.Write($"{iden1}.{iden2}")
+            output.Write($"cast(coms[{activeComponents.IndexOf(iden1)}], {iden1}).data.")
+            generateExpr iden2
+        else
+            output.Write($"{iden1}.")
+            generateExpr iden2
     | RangeExpr ((expr1, opType), expr2) ->
         generateExpr expr1
         output.Write("...")
@@ -269,7 +278,7 @@ let generateType statement =
                 |> string
             
             output.WriteLine("\tpublic var data : {" + dataType[..dataType.Length - 2] + "};\n")
-            output.WriteLine("public function new(d) { data = d; }")
+            output.WriteLine("public function new(d) { data = d; " + $"this.name = \"{iden}\"; " + "}")
             output.WriteLine("}\n")
         | SystemDeclaration ((coms, typ), stats) ->
             for c in coms do
@@ -277,6 +286,8 @@ let generateType statement =
             
             let rnd = System.Random()
             let name = $"{rnd.Next(65, 90) |> char}{rnd.Next(97, 122)}{rnd.Next(97, 122)}"
+            systems.Add(name)
+            
             output.WriteLine($"class {name} extends System " + "{")
             output.WriteLine("public function new() " + "{")
             output.WriteLine($"\tthis.type = {typ};" + "\n}\n")
@@ -288,10 +299,6 @@ let generateType statement =
             output.WriteLine("]);")
             
             output.WriteLine("\t\tif (coms.length == entity.length) {")
-            output.Write("\t\t\tvar coms = coms.map(function (c) { ")
-            for c in coms do
-                output.Write($"if (c.name == \"{c}\") return cast(c, {c}); ")
-            output.WriteLine($"return cast(c, {coms[0]}); " + "});")
             
             for stat in stats do
                 generateStatement stat
@@ -307,17 +314,22 @@ let generate code =
     match code with
     | Success (ast, _) ->
         output.WriteLine("import Entity; import System;")
-        output.WriteLine("typedef Vec3 = { x: Float, y: Float, z: Float}")
+        
+        output.WriteLine(standardLibrary)
         
         for statement in ast do
             generateType statement
         
         output.WriteLine("class Main {")
-        output.WriteLine(standardLibrary)
         output.WriteLine("\tpublic static function main() {")
         
         for statement in ast do
             generateStatement statement
+                
+        output.WriteLine("\t\tvar systems = new SystemManager();")
+        for system in systems do
+            output.WriteLine($"\t\tsystems.addSystem(new {system}());")
+        output.WriteLine("\t\tsystems.run();")
                 
         output.WriteLine("}}")
     | Failure _ -> printfn "Errors with parsing. Could not compile code"

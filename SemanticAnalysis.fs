@@ -70,14 +70,19 @@ let rec traverse expr =
         if (variables.ContainsKey(iden) || constants.ContainsKey(iden) || activeComponents.Contains(iden)) |> not then
             printfn $"{iden} does not exist"; (false, Type(Void, None))
         else
+            let newMem = match mem with
+                         | DataAccessExpr (i, _) -> i
+                         | IdentifierExpr i -> i
+                         | _ -> printfn "Cannot be a member"; ""
+            
             if activeComponents.Contains(iden) then
-                try let memType = components[iden].Value |> List.find (fun (name, _) -> name = mem)
+                try let memType = components[iden].Value |> List.find (fun (name, _) -> name = newMem)
                     (true, snd memType)
                 with | _ ->
                     printfn $"Could not find member {mem}"     
                     (false, Type(Void, None))
             else
-                try let memType = customTypes[iden].Value |> List.find (fun (name, _) -> name = mem)
+                try let memType = customTypes[iden].Value |> List.find (fun (name, _) -> name = newMem)
                     (true, snd memType)
                 with | _ ->
                     printfn $"Could not find member {mem}"     
