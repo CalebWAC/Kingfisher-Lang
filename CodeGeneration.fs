@@ -3,6 +3,7 @@ module CodeGeneration
 open System.IO
 open AST
 open ParserLibrary.Core
+open System.Collections.Generic
     
 let standardLibrary = "
     static function println(str: Any) { Sys.println(str); }
@@ -10,6 +11,8 @@ let standardLibrary = "
 "
     
 let output = new StreamWriter("../../../ECS/Main.hx")
+    
+let activeComponents = List<string>()
     
 let rec generateExpr expr =
     match expr with
@@ -65,7 +68,10 @@ let rec generateExpr expr =
         output.Write($"{iden}[")
         generateExpr expr
         output.Write("]")
-    | DataAccessExpr (iden1, iden2) -> output.Write($"{iden1}.{iden2}")
+    | DataAccessExpr (iden1, iden2) ->
+        if activeComponents.Contains(iden1) then
+            output.Write($"coms[{activeComponents.IndexOf(iden1)}].data.{iden2}")
+        else output.Write($"{iden1}.{iden2}")
     | RangeExpr ((expr1, opType), expr2) ->
         generateExpr expr1
         output.Write("...")
@@ -132,21 +138,18 @@ let rec generateStatement stat =
                 generateStatement expr
             output.WriteLine("}")
         | Reassignment ((iden, op), expr) ->
-            let iden = match iden with
-                       | IdentifierExpr s -> s
-                       | DataAccessExpr(s, s1) -> $"{s}.{s1}"
-                       | _ -> ""
-            
-            output.Write($"{iden} = ")
-            
+            generateExpr iden
+            output.Write($" = ")
             
             if op.IsSome && op.Value = Exp then
-                output.Write($"Math.pow({iden}, ")
+                output.Write($"Math.pow(")
+                generateExpr iden
+                output.Write(", ")
                 generateExpr expr
                 output.Write(");")
             else
                 if op.IsSome then
-                    output.Write($"{iden} ")
+                    generateExpr iden
                     output.Write(match op.Value with
                                  | Add -> "+"
                                  | Sub -> "-"
@@ -257,13 +260,45 @@ let generateType statement =
             
             let dataType =
                 data
-                |> List.map (fun (iden, typ) -> $"{iden}: {typ}, ")
+                |> List.map (fun (iden, typ) ->
+                             let t = match fst typ with
+                                     | Custom s -> s
+                                     | s -> $"{s}"
+                             $"{iden}: {t}, ")
                 |> List.reduce (+)
                 |> string
             
-            output.WriteLine("\tpublic var data : {" + dataType[..dataType.Length - 2] + "};")
+            output.WriteLine("\tpublic var data : {" + dataType[..dataType.Length - 2] + "};\n")
+            output.WriteLine("public function new(d) { data = d; }")
             output.WriteLine("}\n")
-        | SystemDeclaration _ -> ()
+        | SystemDeclaration ((coms, typ), stats) ->
+            for c in coms do
+                activeComponents.Add(c)
+            
+            let rnd = System.Random()
+            let name = $"{rnd.Next(65, 90) |> char}{rnd.Next(97, 122)}{rnd.Next(97, 122)}"
+            output.WriteLine($"class {name} extends System " + "{")
+            output.WriteLine("public function new() " + "{")
+            output.WriteLine($"\tthis.type = {typ};" + "\n}\n")
+            output.WriteLine("public function run() : Void {")
+            output.WriteLine("\tfor (entity in EntityManager.entities) {")
+            
+            output.Write("\t\tvar coms = hasAllComponents(entity, [")
+            for c in coms do output.Write($"\"{c}\", ")
+            output.WriteLine("]);")
+            
+            output.WriteLine("\t\tif (coms.length == entity.length) {")
+            output.Write("\t\t\tvar coms = coms.map(function (c) { ")
+            for c in coms do
+                output.Write($"if (c.name == \"{c}\") return cast(c, {c}); ")
+            output.WriteLine($"return cast(c, {coms[0]}); " + "});")
+            
+            for stat in stats do
+                generateStatement stat
+                
+            output.WriteLine("}}}}")
+            
+            for c in coms do activeComponents.Remove(c) |> ignore
         | TypeAlias tuple -> failwith "todo"
         | Extension tuple -> failwith "todo"
     | _ -> ()

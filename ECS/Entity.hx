@@ -1,4 +1,6 @@
-class Component {}
+class Component {
+    public var name: String;
+}
 
 class EntityManager {
     static public var entities : Array<Array<Component>> = [];

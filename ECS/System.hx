@@ -1,3 +1,5 @@
+import Entity;
+
 enum SystemType {
     Awake;
     Start;
@@ -9,6 +11,10 @@ abstract class System {
     public var type : SystemType;
 
     abstract public function run() : Void;
+
+    function hasAllComponents(entity: Array<Component>, coms: Array<String>) {
+        return entity.filter(function(c) { return coms.contains(c.name); });
+    }
 }
 
 class SystemManager {
