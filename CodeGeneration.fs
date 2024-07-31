@@ -17,6 +17,21 @@ let standardLibrary = "
         public static function println(str: Any) { Sys.println(str); }
         public static function print(str: Any) { Sys.print(str); }
     }
+    
+    class StepIterator {
+      var end:Int;
+      var step:Int;
+      var index:Int;
+
+      public inline function new(start:Int, step:Int, end:Int) {
+        this.index = start;
+        this.end = end;
+        this.step = step;
+      }
+
+      public inline function hasNext() return index < end;
+      public inline function next() return (index += step) - step;
+    }
 "
     
 let output = new StreamWriter("../../../ECS/Main.hx")
@@ -94,17 +109,28 @@ let rec generateExpr expr =
             output.Write($"{iden1}.")
             generateExpr iden2
     | RangeExpr ((expr1, opType), expr2) ->
-        generateExpr expr1
-        output.Write("...")
-        generateExpr expr2
-        
-        if opType = Inclusive then output.Write(" + 1")
+        match opType with
+        | Inclusive | Exclusive ->
+            generateExpr expr1
+            output.Write("...")
+            generateExpr expr2
+            
+            if opType = Inclusive then output.Write(" + 1")
+        | ExclusiveStep expr15 | InclusiveStep expr15 ->
+            output.Write($"new StepIterator(")
+            generateExpr expr1
+            output.Write(", ")
+            generateExpr expr15
+            output.Write(", ")
+            generateExpr expr2
+            match opType with | InclusiveStep _ -> output.Write(" + 1") | _ -> ()
+            output.Write(")")
     | LiteralExpr lit ->
         match lit with
         | IntLiteral i -> output.Write(i)
         | FloatLiteral f -> output.Write(f)
         | BoolLiteral b -> output.Write($"{b}".ToLower())
-        | StringLiteral s -> output.Write($"\"{s}\"")
+        | StringLiteral s -> output.Write($"'{s}'")
         | RuneLiteral c -> output.Write(c)
         | VoidLiteral -> ()
         | CollectionLiteral colLit ->
@@ -131,7 +157,9 @@ let rec generateExpr expr =
                 if List.findIndex (fun va -> va = v) values <> values.Length - 1 then output.Write(",")
             output.Write("}")
         | TupleLiteral expressions -> ()
-    | _ -> ()
+    | ComponentAccessExpr (i1, i2) ->
+        if i1 = "break" then
+            output.WriteLine($"{i2} = true")
 
 let rec generateStatement stat =
     match stat with
@@ -226,7 +254,9 @@ let rec generateStatement stat =
                 for ex in e.Value do
                     generateStatement ex
                 output.WriteLine("}")
-        | ForExpr ((((_, iden), expr), where), stats) ->
+        | ForExpr ((((label, iden), expr), where), stats) ->
+            if label.IsSome then output.WriteLine($"var {label.Value} = false;")
+            
             output.Write($"for ({iden} in ")
             generateExpr expr
             output.WriteLine(") {")
@@ -238,6 +268,8 @@ let rec generateStatement stat =
                 
             for s in stats do
                 generateStatement s
+            
+            if label.IsSome then output.WriteLine($"if ({label.Value} == true) " + "{ break; }")
             
             if where.IsSome then output.Write("}")
             output.WriteLine("}")
@@ -310,7 +342,7 @@ let generateType statement =
                 |> string
             
             output.WriteLine("\tpublic var data : {" + dataType[..dataType.Length - 2] + "};\n")
-            output.WriteLine("public function new(d) { data = d; " + $"this.name = \"{iden}\"; " + "}")
+            output.WriteLine("public function new(d) { data = d; " + $"this.name = '{iden}'; " + "}")
             output.WriteLine("}\n")
         | SystemDeclaration ((coms, typ), stats) ->
             for c in coms do
@@ -327,7 +359,7 @@ let generateType statement =
             output.WriteLine("\tfor (entity in EntityManager.entities) {")
             
             output.Write("\t\tvar coms = hasAllComponents(entity, [")
-            for c in coms do output.Write($"\"{c}\", ")
+            for c in coms do output.Write($"'{c}', ")
             output.WriteLine("]);")
             
             output.WriteLine("\t\tif (coms.length == entity.length) {")

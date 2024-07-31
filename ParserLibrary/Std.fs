@@ -43,7 +43,7 @@ let ws1NoNl = many1 (satisfy (fun c -> c = ' ' || c = '\t') "ws")
 let parseLetter = ['a'..'z'] @ ['A'..'Z'] |> anyOf <?> "letter"
 let digit = satisfy Char.IsDigit "digit"
 let parseAlphanumeric = parseLetter <|> digit <?> "alphanumeric character"
-let parseAny = parseAlphanumeric <|> wsChar <|> anyOf [':'; '$'; '{'; '}'; '.'; '?'; '!'; '@'; '#'; '$'; '%'; '^'; '&'; '*'; '('; ')']
+let parseAny = parseAlphanumeric <|> wsChar <|> anyOf [':'; '$'; '{'; '}'; '.'; '?'; '!'; '@'; '#'; '$'; '%'; '^'; '&'; '*'; '('; ')'; ','; '<'; '>'; '/']
 let pquote = pchar '\'' <?> "quote"
 
 
@@ -179,13 +179,13 @@ let binaryLogOp =
 let arrayExpr = identifier .>> ws .>>. between (pchar '[') (literal() <|> (identifier |>> IdentifierExpr)) (pchar ']') |>> ArrayExpr <?> "array access"
 let dataAccessExpr, dataExRef = parserToRef()
 let componentAccessExpr = identifier .>> pchar '@' .>>. identifier |>> ComponentAccessExpr <?> "component access"
-let accessExpr =   range <|>
-                   literal() <|>
-                   (recordLit |>> LiteralExpr) <|>
-                   arrayExpr <|>
-                   dataAccessExpr <|>
-                   componentAccessExpr <|>
-                   (identifier |>> IdentifierExpr) <?> "access expr"
+let accessExpr = range <|>
+                 literal() <|>
+                 (recordLit |>> LiteralExpr) <|>
+                 arrayExpr <|>
+                 dataAccessExpr <|>
+                 componentAccessExpr <|>
+                 (identifier |>> IdentifierExpr) <?> "access expr"
 
 let funcExpr() = identifier .>> ws1 .>>. sepBy1 accessExpr ws1NoNl |>> FunctionCallExpr <|> accessExpr <?> "function call"
 let unaryExpr = (unaryOp .>>. funcExpr()) |>> UnaryExpr <|> funcExpr() <?> "unary expression"
@@ -200,13 +200,15 @@ recordLitRef.Value <- between (pchar '{')
                          (sepBy1 (identifier .>> ws .>> pchar '=' .>> ws .>>. expr .>> ws) (pchar ',' .>> ws)))
                         (pchar '}') |>> RecordLiteral <?> "record"
 dataExRef.Value <- identifier .>> pchar '.' .>>. expr |>> DataAccessExpr <?> "data access"
-rangeRef.Value <- intLit .>>. (keyword ".." <|> keyword "...") .>>. opt (intLit .>>. (keyword ".." <|> keyword "...")) .>>. intLit
+
+let rangable = literal() <|> arrayExpr <|> dataAccessExpr <|> componentAccessExpr <|> (identifier |>> IdentifierExpr)
+rangeRef.Value <- rangable .>>. (keyword "..." <|> keyword "..") .>>. opt (rangable .>>. (keyword "..." <|> keyword "..")) .>>. rangable
                   |>> fun (((i1, r1), step), i2) ->
-                      let i1 = i1 //|> LiteralExpr
-                      let i2 = i2 |> LiteralExpr
+                      let i1 = i1
+                      let i2 = i2 
                       if step.IsSome then
-                          if snd step.Value = ".." then RangeExpr ((i1, ExclusiveStep (fst step.Value |> LiteralExpr)), i2)
-                          else RangeExpr ((i1, InclusiveStep (fst step.Value |> LiteralExpr)), i2)
+                          if snd step.Value = ".." then RangeExpr ((i1, ExclusiveStep (fst step.Value)), i2)
+                          else RangeExpr ((i1, InclusiveStep (fst step.Value)), i2)
                       else
                           if r1 = ".." then RangeExpr ((i1, Exclusive), i2)
                           else RangeExpr ((i1, Inclusive), i2)
@@ -264,7 +266,7 @@ let statement, binding, expression, typeDeclaration =
     // Fixing references
     funcBindRef.Value <- keyword "fun" >>. ws >>. identifier .>> ws .>>. many parameter .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> ws .>> pchar '}' |>> FunctionDeclaration
     ifExpressRef.Value <- ifCond .>> ws .>>. opt (keyword "where" >>. ws >>. expr) .>> ws .>> keyword "then" .>> ws .>> keyword "{" .>> ws .>>. many1 (statement .>> ws) .>> pchar '}' |>> IfExpress
-    ifExprRef.Value <- keyword "if" >>. ws >>. ifExpress .>> ws .>>. opt(many1 (keyword "elif" >>. ifExpress .>> ws)) .>> ws .>>. opt (keyword "else" >>. ws >>. pchar '{' >>. ws >>. many1 (statement .>> ws) .>> pchar '}') |>> IfExpr <?> "if"
+    ifExprRef.Value <- keyword "if" >>. ws >>. ifExpress .>> ws .>>. opt(many1 (keyword "elif" >>. ws >>. ifExpress .>> ws)) .>> ws .>>. opt (keyword "else" >>. ws >>. pchar '{' >>. ws >>. many1 (statement .>> ws) .>> pchar '}') |>> IfExpr <?> "if"
     forExprRef.Value <- opt (identifier .>> pchar '@') .>> ws .>> keyword "for" .>> ws .>>. identifier .>> ws .>> keyword "in" .>> ws .>>. expr .>> ws .>>. opt (keyword "where" >>. ws >>. expr) .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> pchar '}' |>> ForExpr <?> "for loop"
     whileExprRef.Value <- keyword "while" >>. ws >>. expr .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> pchar '}' |>> WhileExpr <?> "while loop"
     matchExprRef.Value <- keyword "when" >>. ws >>. identifier .>> ws .>> keyword "is" .>> ws .>> pchar '{' .>> ws .>>. many1 (expr .>> ws .>> keyword "->" .>> ws .>>. many1 (statement .>> ws)) .>> ws .>> pchar '}' |>> MatchExpr <?> "match"

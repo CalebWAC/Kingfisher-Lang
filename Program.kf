@@ -1,12 +1,5 @@
-let max = 20
+let max = 10
 
-for i in 0..max where i % 2 = 0 do {
-    var value : int? = None
-    
-    if i > 5 then { value <- Some i }
-    
-    if let value then { 
-        print 'Its greater than 5: '
-        println i
-    }
+for x in 0..2...max do {
+    println x
 }

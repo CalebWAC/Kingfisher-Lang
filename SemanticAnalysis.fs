@@ -4,8 +4,9 @@ open AST
 open ParserLibrary.Core
 open System.Collections.Generic
 
-let constants = Dictionary<string, Type option>()
 let variables = Dictionary<string, Type option>()
+let constants = Dictionary<string, Type option>()
+constants.Add("break", None)
 
 let unionValues = Dictionary<string, Type>()
 unionValues.Add("Some", Type(Option Void, None))
@@ -53,7 +54,8 @@ let rec validateExpr expr =
         if variables.ContainsKey(iden) |> not && constants.ContainsKey(iden) |> not && unionValues.ContainsKey(iden) |> not then
             printfn $"{iden} does not exist"; (false, Type(Void, None))
         else (true, if variables.ContainsKey(iden) then variables[iden].Value
-                    elif constants.ContainsKey(iden) then constants[iden].Value
+                    elif constants.ContainsKey(iden) then
+                        if iden <> "break" then constants[iden].Value else Type(Void, None)
                     else unionValues[iden])
     | FunctionCallExpr (iden, exprs) ->
         if functions.ContainsKey(iden) |> not && unionValues.ContainsKey(iden) |> not then
@@ -94,7 +96,7 @@ let rec validateExpr expr =
     | ComponentAccessExpr (iden, _) ->
         if variables.ContainsKey(iden) |> not && constants.ContainsKey(iden) |> not then
             printfn $"{iden} does not exist"; (false, Type(Void, None))
-        else (true, if variables.ContainsKey(iden) then variables[iden].Value else constants[iden].Value)
+        else (true, if variables.ContainsKey(iden) then variables[iden].Value elif iden = "break" then Type(Void, None) else constants[iden].Value)
     | LiteralExpr lit ->
         let litToType = match lit with
                         | IntLiteral _ -> Type (Int, None)
@@ -114,6 +116,16 @@ let rec validateExpr expr =
                             ret
                         | _ -> Type (Void, None)
         (true, litToType)
+    | RangeExpr ((e1, typ), e2) ->
+        if validateExpr e1 <> (true, Type(Int, None)) then printfn $"{e1} does not evaluate to int"; (false, Type(Void, None))
+        elif validateExpr e2 <> (true, Type(Int, None)) then printfn $"{e2} does not evaluate to int"; (false, Type(Void, None))
+        else
+            match typ with
+            | ExclusiveStep e | InclusiveStep e ->
+                if validateExpr e <> (true, Type(Int, None)) then printfn $"{e} does not evaluate to int"; (false, Type(Void, None))
+                else (true, Type(Int, None))
+            | _ -> (true, Type(Int, None))
+        
     | _ -> (true, Type(Void, None))
     
 let rec validateStatement statement =
