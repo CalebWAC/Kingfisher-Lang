@@ -63,6 +63,7 @@ and TypeKeyWord =
     | Void
     | Map
     | Custom of string
+    | Option of TypeKeyWord
 
 and CollectionType =
     | Array
@@ -108,11 +109,11 @@ and IfExpr = (IfExpress * IfExpress list option) * Statement list option
 and IfExpress = (IfCondition * Expression option) * Statement list
 and IfCondition =
     | Expr of Expression
-    | LetStatement of Identifier  * Expression
+    | LetStatement of Identifier
 
 and ForExpr = (((Identifier option * Identifier) * Expression) * Expression option) * Statement list
 and WhileExpr = Expression * Statement list 
-and MatchExpr = Identifier * (Expression * Statement list) list // change first to expression
+and MatchExpr = Identifier * (Expression * Statement list) list
 
 and Expression = 
     | BinaryLogicalExpr of (Expression * BinaryLogicalOperator) * Expression

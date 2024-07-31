@@ -8,6 +8,9 @@ let constants = Dictionary<string, Type option>()
 let variables = Dictionary<string, Type option>()
 
 let unionValues = Dictionary<string, Type>()
+unionValues.Add("Some", Type(Option Void, None))
+unionValues.Add("None", Type(Option Void, None))
+
 let customTypes = Dictionary<string, (string * Type) list option>()
 customTypes.Add("Vec3", Some ["x", Type(Float, None); "y", Type(Float, None); "z", Type(Float, None)])
 
@@ -16,6 +19,7 @@ let activeComponents = List<string>()
 
 let functions = Dictionary<string, Type option list * Type>()
 functions.Add ("println", ([Some(String, None)], (Void, None)))
+functions.Add ("print", ([Some(String, None)], (Void, None)))
 
 let checkType typ =
     match fst typ with
@@ -24,27 +28,27 @@ let checkType typ =
             printfn $"Type {s} does not exist"
     | _ -> ()
 
-let rec traverse expr =
+let rec validateExpr expr =
     match expr with
     | BinaryLogicalExpr (e1, e2) ->
-        let t1 = traverse (fst e1)
-        let t2 = traverse e2
+        let t1 = validateExpr (fst e1)
+        let t2 = validateExpr e2
         if fst t1 && fst t2 then
             (snd t1 = snd t2, snd t1)
         else (false, Type(Void, None))
     | BinaryComparisonExpr (e1, e2) ->
-        let t1 = traverse (fst e1)
-        let t2 = traverse e2
+        let t1 = validateExpr (fst e1)
+        let t2 = validateExpr e2
         if fst t1 && fst t2 && snd t1 = snd t2 then
             (true, Type(Bool, None))
         else (false, Type(Void, None))
     | BinaryArithmeticExpr (e1, e2) ->
-        let t1 = traverse (fst e1)
-        let t2 = traverse e2
+        let t1 = validateExpr (fst e1)
+        let t2 = validateExpr e2
         if fst t1 && fst t2 then
             (snd t1 = snd t2, snd t1)
         else (false, Type(Void, None))
-    | UnaryExpr (_, e) -> traverse e
+    | UnaryExpr (_, e) -> validateExpr e
     | IdentifierExpr iden ->
         if variables.ContainsKey(iden) |> not && constants.ContainsKey(iden) |> not && unionValues.ContainsKey(iden) |> not then
             printfn $"{iden} does not exist"; (false, Type(Void, None))
@@ -58,7 +62,7 @@ let rec traverse expr =
             if functions.ContainsKey(iden) then
                 let callValid = exprs 
                                 |> List.forall (fun expr ->
-                                    try snd (traverse expr) = ((fst(functions[iden]))[exprs |> List.findIndex (fun e -> e = expr)]).Value
+                                    try snd (validateExpr expr) = ((fst(functions[iden]))[exprs |> List.findIndex (fun e -> e = expr)]).Value
                                     with | _ -> true)
                 (callValid, (snd functions[iden]))
             else (true, unionValues[iden])
@@ -105,7 +109,7 @@ let rec traverse expr =
                             let mutable ret = Type(Void, None)
                             for cusTyp in customTypes do
                                 let typ = Seq.zip cusTyp.Value.Value members
-                                          |> Seq.forall (fun (c, m) -> fst c = fst m && snd c = snd (traverse (snd m)))
+                                          |> Seq.forall (fun (c, m) -> fst c = fst m && snd c = snd (validateExpr (snd m)))
                                 if typ then ret <- Type(Custom cusTyp.Key, None)
                             ret
                         | _ -> Type (Void, None)
@@ -117,11 +121,11 @@ let rec validateStatement statement =
     | Binding bind ->
         match bind with
         | ImmutableBinding immut ->
-            let valid, typ = snd immut |> traverse
+            let valid, typ = snd immut |> validateExpr
             checkType typ
             if valid then constants.Add(fst (fst immut), Some typ)
         | MutableBinding mut ->
-            let valid, typ = snd mut |> traverse
+            let valid, typ = snd mut |> validateExpr
             checkType typ
             if valid then variables.Add(fst (fst mut), Some typ)
         | FunctionDeclaration func ->
@@ -142,7 +146,7 @@ let rec validateStatement statement =
                               match (snd func)[(snd func).Length - 1] with
                               | Statement.Expression e ->
                                   match e with
-                                  | Expression e -> traverse e |> snd
+                                  | Expression e -> validateExpr e |> snd
                                   | _ -> printfn "Must end function with expression"; Type(Void, None)
                               | _ -> printfn "Must end function with expression"; Type(Void, None)
             
@@ -169,29 +173,29 @@ let rec validateStatement statement =
                                     else printfn $"{s} does not exist"
                                     Type(Void, None)
                                 else
-                                    fst (fst res) |> traverse |> snd
+                                    fst (fst res) |> validateExpr |> snd
                           | _ -> Type(Void, None)
             
-            let value = snd res |> traverse |> snd
+            let value = snd res |> validateExpr |> snd
             if value <> varType then printfn $"Type {fst value} is not equal to {fst varType}"
         | EntityBinding (_, coms) ->
             coms |> List.iter (fun (iden, data) -> if components.ContainsKey(iden) |> not then printfn $"Component {iden} does not exist" )
     | Statement.Expression expr ->
         match expr with
-        | ForExpr ((((_, iden), e), _), exprs) ->
-            constants.Add(iden, snd(traverse e) |> Some)
+        | ForExpr ((((_, iden), e), where), exprs) ->
+            constants.Add(iden, snd(validateExpr e) |> Some)
+            if where.IsSome then validateExpr where.Value |> ignore
             for e in exprs do validateStatement e
             constants.Remove(iden) |> ignore
         | WhileExpr (expr, exprs) ->
-            traverse expr |> ignore
+            validateExpr expr |> ignore
             for e in exprs do validateStatement e
         | IfExpr ((e, el), els) ->
             let evalIf ifExpr =
                 match fst (fst ifExpr) with
-                | Expr ex -> traverse ex |> ignore
-                | LetStatement (iden, expr) ->
-                    traverse expr |> ignore
-                    constants.Add(iden, None)
+                | Expr ex -> validateExpr ex |> ignore
+                | LetStatement iden ->
+                    if constants.ContainsKey(iden) then constants[iden] <- None
                 for expr in snd ifExpr do validateStatement expr
             
             evalIf e
@@ -206,7 +210,7 @@ let rec validateStatement statement =
             for case in cases do
                 for statement in snd case do
                     validateStatement statement
-        | Expression e -> traverse e |> ignore
+        | Expression e -> validateExpr e |> ignore
     | TypeDeclaration decl ->
         match decl with
         | RecordDeclaration (iden, members) ->

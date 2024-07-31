@@ -1,17 +1,12 @@
-com Transform = {
-    position: Vec3
-    rotation: Vec3
-    scale: Vec3
-}
+let max = 20
 
-com Player = { name: string }
-
-ent player = Transform {position = {x = 0, y = 0, z = 0},
-                        rotation = {x = 0, y = 0, z = 0},
-                        scale= {x = 0, y = 0, z = 0}} 
-             Player { name = 'player' }
-
-sys Transform Player | Update = {
-    Transform.position.x <-+ 1
-    println Transform.position.x
+for i in 0..max where i % 2 = 0 do {
+    var value : int? = None
+    
+    if i > 5 then { value <- Some i }
+    
+    if let value then { 
+        print 'Its greater than 5: '
+        println i
+    }
 }

@@ -107,20 +107,10 @@ let runeLit = between (pchar '`') parseAlphanumeric (pchar '`') |>> RuneLiteral 
 let voidLit = keyword "()"
 
 
-let range = intLit .>>. (keyword ".." <|> keyword "...") .>>. opt (intLit .>>. (keyword ".." <|> keyword "...")) .>>. intLit
-            |>> fun (((i1, r1), step), i2) ->
-                let i1 = i1 |> LiteralExpr
-                let i2 = i2 |> LiteralExpr
-                if step.IsSome then
-                    if snd step.Value = ".." then RangeExpr ((i1, ExclusiveStep (fst step.Value |> LiteralExpr)), i2)
-                    else RangeExpr ((i1, InclusiveStep (fst step.Value |> LiteralExpr)), i2)
-                else
-                    if r1 = ".." then RangeExpr ((i1, Exclusive), i2)
-                    else RangeExpr ((i1, Inclusive), i2)
-           <?> "range" 
+let range, rangeRef = parserToRef()
 
-let typeKeyWord = identifier .>> ws .>>. opt (keyword "array" <|> keyword "set")
-                   |>> fun (str, optCol) ->
+let typeKeyWord = identifier .>>. opt (pchar '?') .>> ws .>>. opt (keyword "array" <|> keyword "set")
+                   |>> fun ((str, option), optCol) ->
                            let typeKey = match str with
                                          | "int" -> Int
                                          | "float" -> Float
@@ -131,7 +121,7 @@ let typeKeyWord = identifier .>> ws .>>. opt (keyword "array" <|> keyword "set")
                            let colType = match optCol with
                                          | Some col -> if col = "array" then Some CollectionType.Array else Some Set
                                          | None -> None
-                           AST.Type (typeKey, colType)
+                           AST.Type ((if option.IsSome then Option typeKey else typeKey), colType)
 let explicitType = pchar ':' >>. ws >>. typeKeyWord <?> "explicit type"
 
 let rec literal () = floatLit <|> intLit <|> stringLit <|> boolLit <|> runeLit <|>
@@ -189,7 +179,7 @@ let binaryLogOp =
 let arrayExpr = identifier .>> ws .>>. between (pchar '[') (literal() <|> (identifier |>> IdentifierExpr)) (pchar ']') |>> ArrayExpr <?> "array access"
 let dataAccessExpr, dataExRef = parserToRef()
 let componentAccessExpr = identifier .>> pchar '@' .>>. identifier |>> ComponentAccessExpr <?> "component access"
-let accessExpr = range <|>
+let accessExpr =   range <|>
                    literal() <|>
                    (recordLit |>> LiteralExpr) <|>
                    arrayExpr <|>
@@ -204,11 +194,24 @@ let binaryCompExpr = (binaryArithExpr .>> ws .>>. binaryCompOp .>> ws .>>. binar
 
 let expr = ((binaryCompExpr .>> ws .>>. binaryLogOp .>> ws .>>. binaryCompExpr) |>> BinaryLogicalExpr <|> binaryCompExpr) <?> "expression"
 
+// Resolving references
 recordLitRef.Value <- between (pchar '{')
                         (ws >>. opt (identifier .>> ws .>> keyword "with") .>> ws .>>.
                          (sepBy1 (identifier .>> ws .>> pchar '=' .>> ws .>>. expr .>> ws) (pchar ',' .>> ws)))
                         (pchar '}') |>> RecordLiteral <?> "record"
 dataExRef.Value <- identifier .>> pchar '.' .>>. expr |>> DataAccessExpr <?> "data access"
+rangeRef.Value <- intLit .>>. (keyword ".." <|> keyword "...") .>>. opt (intLit .>>. (keyword ".." <|> keyword "...")) .>>. intLit
+                  |>> fun (((i1, r1), step), i2) ->
+                      let i1 = i1 //|> LiteralExpr
+                      let i2 = i2 |> LiteralExpr
+                      if step.IsSome then
+                          if snd step.Value = ".." then RangeExpr ((i1, ExclusiveStep (fst step.Value |> LiteralExpr)), i2)
+                          else RangeExpr ((i1, InclusiveStep (fst step.Value |> LiteralExpr)), i2)
+                      else
+                          if r1 = ".." then RangeExpr ((i1, Exclusive), i2)
+                          else RangeExpr ((i1, Inclusive), i2)
+                 <?> "range" 
+
 
 let statement, binding, expression, typeDeclaration =
     //// Bindings \\\\
@@ -223,7 +226,7 @@ let statement, binding, expression, typeDeclaration =
 
     let binding = choice [immutableBinding; mutableBinding; entityBinding; functionBinding; reassignment] |>> Binding <?> "binding"
 
-    let ifCond = (expr |>> IfCondition.Expr) <|> (keyword "let" >>. ws >>. identifier .>> ws .>> pchar '=' .>>. expr |>> LetStatement)
+    let ifCond = (expr |>> IfCondition.Expr) <|> (keyword "let" >>. ws >>. identifier |>> IfCondition.LetStatement)
     let ifExpress, ifExpressRef = parserToRef() 
     let ifExpr, ifExprRef = parserToRef() 
 

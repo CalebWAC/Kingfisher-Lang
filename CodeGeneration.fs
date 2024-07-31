@@ -6,6 +6,11 @@ open ParserLibrary.Core
 open System.Collections.Generic
     
 let standardLibrary = "
+    enum Option<T> {
+        Some(v:T);
+        None;
+    }
+
     typedef Vec3 = { x: Float, y: Float, z: Float}
     
     class Standard {
@@ -18,6 +23,13 @@ let output = new StreamWriter("../../../ECS/Main.hx")
     
 let activeComponents = List<string>()
 let systems = List<string>()
+    
+    
+let evalType (typ : Type option) = if typ.IsSome then
+                                        match fst typ.Value with
+                                        | Option o -> $": Option<{o}>"
+                                        | _ -> $": {fst typ.Value}"
+                                   else ""
     
 let rec generateExpr expr =
     match expr with
@@ -64,7 +76,7 @@ let rec generateExpr expr =
         generateExpr expr
     | IdentifierExpr iden -> output.Write(iden)
     | FunctionCallExpr (iden, exprs) ->
-        if iden = "println" then output.Write("Standard.")
+        if iden = "println" || iden = "print" then output.Write("Standard.")
         output.Write($"{iden}(")
         for e in exprs do
             generateExpr e
@@ -126,12 +138,12 @@ let rec generateStatement stat =
     | Binding bind ->
         match bind with
         | ImmutableBinding ((iden, typ), expr) ->
-            let exType = if typ.IsSome then $": {fst typ.Value}" else ""
+            let exType = evalType typ
             output.Write($"var {iden} {exType} = ")
             generateExpr expr
             output.WriteLine(";")
         | MutableBinding ((iden, typ), expr) ->
-            let exType = if typ.IsSome then $": {fst typ.Value}" else ""
+            let exType = evalType typ
             output.Write($"var {iden} {exType} = ")
             generateExpr expr
             output.WriteLine(";")
@@ -139,7 +151,10 @@ let rec generateStatement stat =
             let param = seq { for p in params ->
                                 match p with
                                 | Unspecified iden -> $"{iden}, "
-                                | Specified ((_, iden), typ) -> $"{iden}: {fst typ.Value},"
+                                | Specified ((_, iden), typ) ->
+                                    match fst typ.Value with
+                                    | Option o -> $"{iden}: Option<{o}>,"
+                                    | _ -> $"{iden}: {fst typ.Value},"
                             } |> List.ofSeq |> string |> String.filter (fun c -> c <> ';' && c <> '[') 
             output.WriteLine($"function {iden}({param[..param.Length - 4]})" + "{") //  : {fst (snd SemanticAnalysis.functions[iden])}
             for expr in exprs do
@@ -180,11 +195,17 @@ let rec generateStatement stat =
     | Statement.Expression expr ->
         match expr with
         | IfExpr ((i, ei), e) ->
-            output.Write("if (")
-            let expr = match fst (fst i) with
-                       | Expr e -> generateExpr e
-                       | _ -> ()
-            output.WriteLine($"{expr}) " + "{")
+            match fst (fst i) with
+            | Expr e ->
+               output.Write("if (")
+               generateExpr e
+               output.WriteLine(") {")
+            | LetStatement iden ->
+               output.WriteLine($"var val = switch ({iden}) " + "{")
+               output.WriteLine("\tcase None: false;")
+               output.WriteLine("\tcase Some(v): true; }")
+               output.Write("if (val) {")
+                           
             for e in snd i do
                 generateStatement e
             output.WriteLine("}")
@@ -205,12 +226,20 @@ let rec generateStatement stat =
                 for ex in e.Value do
                     generateStatement ex
                 output.WriteLine("}")
-        | ForExpr ((((_, iden), expr), _), stats) ->
+        | ForExpr ((((_, iden), expr), where), stats) ->
             output.Write($"for ({iden} in ")
             generateExpr expr
             output.WriteLine(") {")
+            
+            if where.IsSome then
+                output.Write("\tif (")
+                generateExpr where.Value
+                output.WriteLine(") {")
+                
             for s in stats do
                 generateStatement s
+            
+            if where.IsSome then output.Write("}")
             output.WriteLine("}")
         | WhileExpr (expr, exprs) ->
             output.Write("while (")
@@ -242,6 +271,7 @@ let generateType statement =
                 output.Write($"var {snd(fst v)}: ")
                 match fst (snd v) with
                 | Custom s -> output.Write(s)
+                | Option o -> output.Write($"Option<{o}>")
                 | s -> output.Write(s)
                 output.Write("; ")
             output.WriteLine("}")
@@ -260,6 +290,7 @@ let generateType statement =
                         output.Write($"{name}: ")
                         match fst t with
                         | Custom s -> output.Write(s)
+                        | Option o -> output.Write($"Option<{o}>")
                         | s -> output.Write(s)
                         if List.findIndex (fun ty -> ty = t) types <> types.Length - 1 then output.Write(", ")
                     output.WriteLine(");")
@@ -272,6 +303,7 @@ let generateType statement =
                 |> List.map (fun (iden, typ) ->
                              let t = match fst typ with
                                      | Custom s -> s
+                                     | Option o -> $"Option<{o}>"
                                      | s -> $"{s}"
                              $"{iden}: {t}, ")
                 |> List.reduce (+)

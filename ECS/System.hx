@@ -33,9 +33,11 @@ class SystemManager {
     }
     
     public function run() {
-        while (true) {
-            for (system in systems) {
-                if (system.type == Update) system.run();
+        if (systems.length > 0) {
+            while (true) {
+                for (system in systems) {
+                    if (system.type == Update) system.run();
+                }
             }
         }
     }
