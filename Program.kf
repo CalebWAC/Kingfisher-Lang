@@ -1,9 +1,9 @@
-let max = 60
+type Vec2 = { x: float, y: float }
 
-fun printSquared x :=
-    let square = x * x
-    println square
+impl Int :=
+    fun twice a :=
+        a + a
 
-for x in 0..5...max do
-    if x % 3 = 0 then 
-        printSquared x
+for x in 0..5...60 do
+    if x % 3 = 0 then
+        print x.twice

@@ -187,12 +187,13 @@ let accessExpr = range <|>
                  componentAccessExpr <|>
                  (identifier |>> IdentifierExpr) <?> "access expr"
 
-let funcExpr() = identifier .>> ws1 .>>. sepBy1 accessExpr ws1NoNl |>> FunctionCallExpr <|> accessExpr <?> "function call"
+let funcExpr() = identifier .>> ws1NoNl .>>. sepBy1 accessExpr ws1NoNl |>> FunctionCallExpr <|> accessExpr <?> "function call"
 let unaryExpr = (unaryOp .>>. funcExpr()) |>> UnaryExpr <|> funcExpr() <?> "unary expression"
-let binaryArithExpr = (unaryExpr .>> ws .>>. binaryArithOp .>> ws .>>. unaryExpr) |>> BinaryArithmeticExpr <|> unaryExpr <?> "binaryArth expr"
+
+let binaryArithExpr = (unaryExpr .>>. many1 (ws >>. binaryArithOp .>> ws .>>. unaryExpr)) |>> BinaryArithmeticExpr <|> unaryExpr <?> "binaryArth expr"
 let binaryCompExpr = (binaryArithExpr .>> ws .>>. binaryCompOp .>> ws .>>. binaryArithExpr) |>> BinaryComparisonExpr <|> binaryArithExpr <?> "binaryComp expr"
 
-let expr = ((binaryCompExpr .>> ws .>>. binaryLogOp .>> ws .>>. binaryCompExpr) |>> BinaryLogicalExpr <|> binaryCompExpr) <?> "expression"
+let expr = ((binaryCompExpr .>>. many1 (ws >>. binaryLogOp .>> ws .>>. binaryCompExpr)) |>> BinaryLogicalExpr <|> binaryCompExpr) <?> "expression"
 
 // Resolving references
 recordLitRef.Value <- between (pchar '{')
@@ -250,14 +251,15 @@ let statement, binding, expression, typeDeclaration =
                                    UnionDeclaration (name, ucases)
                            <?> "unionDeclaration"
     
-    let recordDeclaration = keyword "type" >>. ws >>. identifier .>> ws .>> keyword ":=" .>> ws .>> pchar '{' .>>. sepBy1 (ws >>. opt (keyword "var") .>> ws .>>. identifier .>> ws .>>. explicitType) (pchar ',') .>> ws .>> pchar '}' |>> RecordDeclaration       
+    let recordDeclaration = keyword "type" >>. ws >>. identifier .>> ws .>> keyword "=" .>> ws .>> pchar '{' .>>. sepBy1 (ws >>. opt (keyword "var") .>> ws .>>. identifier .>> ws .>>. explicitType) (pchar ',') .>> ws .>> pchar '}' |>> RecordDeclaration       
     
     let componentDeclaration = keyword "com" >>. ws >>. identifier .>> ws .>> keyword ":=" .>> ws .>> pchar '{' .>> ws .>>. many1 (identifier .>> ws .>>. explicitType) .>> ws .>> pchar '}' |>> ComponentDeclaration
     
     let systemBinding, sysBindRef = parserToRef()
-
+   
+    let extension, extensionRef = parserToRef()
     
-    let typeDeclaration = choice [ unionDeclaration; recordDeclaration; componentDeclaration; systemBinding ] |>> TypeDeclaration
+    let typeDeclaration = choice [ unionDeclaration; recordDeclaration; componentDeclaration; systemBinding; extension ] |>> TypeDeclaration
     
     
     let statement = choice [ binding; expression |>> Statement.Expression; typeDeclaration ] <?> "statement"
@@ -281,6 +283,8 @@ let statement, binding, expression, typeDeclaration =
                                                            | "Awake" -> Awake
                                                            | "End" -> End
                             SystemDeclaration((coms, systemType), expr)
+    
+    extensionRef.Value <- keyword "impl" >>. ws >>. identifier .>> ws .>> keyword ":=" .>> ws .>> pchar '{' .>> ws .>>. many1 (binding <|> typeDeclaration .>> ws) .>> ws .>> pchar '}' |>> Extension
     
     statement, binding, expression, typeDeclaration
 

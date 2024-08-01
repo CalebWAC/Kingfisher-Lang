@@ -27,13 +27,21 @@ import Entity; import System;
       public inline function next() return (index += step) - step;
     }
 
+typedef Vec2 = {var x: Float; var y: Float; }
+using Main.IntExtender;
+
+class IntExtender {
+function twice(a){
+return a + a;
+}
+}
 class Main {
 	public static function main() {
-var max  = 60;
-function printSquared(x){
-return var square  = x * x;
+for (x in new StepIterator(0, 5, 60 + 1)) {
+if (x % 3 == 0) {
+Standard.print(x.squared);
 }
-Standard.println(squarefor,x);
+}
 		var systems = new SystemManager();
 		systems.run();
 }}

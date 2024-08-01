@@ -10,7 +10,6 @@ let main loc =
     let file = reader.ReadToEnd()
     
     let program = insertBrackets file
-    printfn $"{program}"
     
     let ast = runString parseProgram program
 

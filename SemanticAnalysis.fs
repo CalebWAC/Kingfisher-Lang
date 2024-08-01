@@ -32,10 +32,9 @@ let checkType typ =
 let rec validateExpr expr =
     match expr with
     | BinaryLogicalExpr (e1, e2) ->
-        let t1 = validateExpr (fst e1)
-        let t2 = validateExpr e2
-        if fst t1 && fst t2 then
-            (snd t1 = snd t2, snd t1)
+        let t1 = validateExpr e1
+        let t2 = [ for term in e2 -> validateExpr (snd term) |> fst ]
+        if fst t1 && List.forall id t2 then (true, snd t1)
         else (false, Type(Void, None))
     | BinaryComparisonExpr (e1, e2) ->
         let t1 = validateExpr (fst e1)
@@ -44,10 +43,9 @@ let rec validateExpr expr =
             (true, Type(Bool, None))
         else (false, Type(Void, None))
     | BinaryArithmeticExpr (e1, e2) ->
-        let t1 = validateExpr (fst e1)
-        let t2 = validateExpr e2
-        if fst t1 && fst t2 then
-            (snd t1 = snd t2, snd t1)
+        let t1 = validateExpr e1
+        let t2 = [ for term in e2 -> validateExpr (snd term) |> fst ]
+        if fst t1 && List.forall id t2 then (true, snd t1)
         else (false, Type(Void, None))
     | UnaryExpr (_, e) -> validateExpr e
     | IdentifierExpr iden ->
@@ -247,7 +245,9 @@ let rec validateStatement statement =
                 validateStatement e
             for c in coms do activeComponents.Remove(c) |> ignore
         | TypeAlias tuple -> failwith "todo"
-        | Extension tuple -> failwith "todo"
+        | Extension (_, stats) ->
+            for stat in stats do
+                validateStatement stat
 
 let analyze ast =
     match ast with

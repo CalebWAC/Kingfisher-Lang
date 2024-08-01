@@ -116,9 +116,9 @@ and WhileExpr = Expression * Statement list
 and MatchExpr = Identifier * (Expression * Statement list) list
 
 and Expression = 
-    | BinaryLogicalExpr of (Expression * BinaryLogicalOperator) * Expression
+    | BinaryLogicalExpr of Expression * (BinaryLogicalOperator * Expression) list
     | BinaryComparisonExpr of (Expression * BinaryComparisonOperator) * Expression
-    | BinaryArithmeticExpr of (Expression * BinaryArithmeticOperator) * Expression
+    | BinaryArithmeticExpr of Expression * (BinaryArithmeticOperator * Expression) list
     | UnaryExpr of UnaryOperator * Expression
     | IdentifierExpr of Identifier
     | FunctionCallExpr of Identifier * Expression list

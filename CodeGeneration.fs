@@ -48,13 +48,15 @@ let evalType (typ : Type option) = if typ.IsSome then
     
 let rec generateExpr expr =
     match expr with
-    | BinaryLogicalExpr ((e1, op), e2) ->
+    | BinaryLogicalExpr (e1, terms) ->
         generateExpr e1
-        let operator = match op with
-                       | And -> "&&"
-                       | Or -> "||"
-        output.Write($" {operator} ")
-        generateExpr e2
+            
+        for op, e2 in terms do
+            let operator = match op with
+                           | And -> "&&"
+                           | Or -> "||"
+            output.Write($" {operator} ")
+            generateExpr e2
     | BinaryComparisonExpr ((e1, op), e2) ->
         generateExpr e1
         let operator = match op with
@@ -66,23 +68,34 @@ let rec generateExpr expr =
                        | GreaterEqual -> ">="
         output.Write($" {operator} ")
         generateExpr e2
-    | BinaryArithmeticExpr ((e1, op), e2) ->
-        if op <> Exp then
+    | BinaryArithmeticExpr (e1, terms) -> 
+        if fst terms[0] <> Exp then
             generateExpr e1
-            let operator = match op with
-                           | Add -> "+"
-                           | Sub -> "-"
-                           | Mul -> "*"
-                           | Div -> "/"
-                           | Mod -> "%"
-                           | _ -> ""
-            output.Write($" {operator} ")
-            generateExpr e2
+            
+            for op, e2 in terms do
+                let operator = match op with
+                               | Add -> "+"
+                               | Sub -> "-"
+                               | Mul -> "*"
+                               | Div -> "/"
+                               | Mod -> "%"
+                               | _ -> ""
+                output.Write($" {operator} ")
+                generateExpr e2
         else
             output.Write("Math.pow(")
             generateExpr e1
             output.Write(", ")
-            generateExpr e2
+            for op, e2 in terms do
+                let operator = match op with
+                               | Add -> "+"
+                               | Sub -> "-"
+                               | Mul -> "*"
+                               | Div -> "/"
+                               | Mod -> "%"
+                               | _ -> ""
+                output.Write($" {operator} ")
+                generateExpr e2
             output.Write(")")
     | UnaryExpr (op, expr) ->
         match op with
@@ -371,7 +384,12 @@ let generateType statement =
             
             for c in coms do activeComponents.Remove(c) |> ignore
         | TypeAlias tuple -> failwith "todo"
-        | Extension tuple -> failwith "todo"
+        | Extension (iden, stats) ->
+            output.WriteLine($"using Main.{iden}Extender;\n")
+            output.WriteLine($"class {iden}Extender " + "{")
+            for stat in stats do
+                generateStatement stat
+            output.WriteLine("}")
     | _ -> ()
 
 let generate code =

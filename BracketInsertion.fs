@@ -28,11 +28,11 @@ let insertBrackets (program : string) =
                 else beginning <- false
             spaces / 4
              
-        printfn $"{tabs}     {newTabs}"
-             
-        for _ in tabs..newTabs - 1 do
+        for _ in newTabs..tabs - 1 do
             lines[i] <- lines[i] + "}"
         
         tabs <- newTabs
     
-    lines |> Seq.reduce (+)
+    lines
+    |> Seq.map (fun line -> line + "\n")
+    |> Seq.reduce (+)
