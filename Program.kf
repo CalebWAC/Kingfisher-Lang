@@ -1,9 +1,4 @@
-type Vec2 = { x: float, y: float }
+let map = ['H': 1, 'He': 2, 'Li': 3]
 
-impl Int :=
-    fun twice a :=
-        a + a
-
-for x in 0..5...60 do
-    if x % 3 = 0 then
-        print x.twice
+for name, num in map do
+    println map

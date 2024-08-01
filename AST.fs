@@ -111,7 +111,11 @@ and IfCondition =
     | Expr of Expression
     | LetStatement of Identifier
 
-and ForExpr = (((Identifier option * Identifier) * Expression) * Expression option) * Statement list
+and ForExpr = (((Identifier option * ForVar) * Expression) * Expression option) * Statement list
+and ForVar =
+    | Identifier of Identifier
+    | MapDestructuring of Identifier * Identifier
+
 and WhileExpr = Expression * Statement list 
 and MatchExpr = Identifier * (Expression * Statement list) list
 
@@ -126,6 +130,7 @@ and Expression =
     | DataAccessExpr of Identifier * Expression
     | ComponentAccessExpr of Identifier * Identifier
     | RangeExpr of (Expression * RangeType) * Expression
+    | Parenthesis of Expression
     | LiteralExpr of Literal
 
 and RangeType = 
@@ -140,7 +145,7 @@ and Literal =
     | BoolLiteral of bool
     | StringLiteral of string
     | RuneLiteral of char
-    | VoidLiteral
+    | VoidLiteral of string
     | CollectionLiteral of CollectionLiteral
     | RecordLiteral of string option * (Identifier * Expression) list
     | TupleLiteral of Expression list

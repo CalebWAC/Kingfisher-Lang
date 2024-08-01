@@ -77,20 +77,27 @@ let rec validateExpr expr =
             let newMem = match mem with
                          | DataAccessExpr (i, _) -> i
                          | IdentifierExpr i -> i
+                         | FunctionCallExpr (i, _) -> i
                          | _ -> printfn "Cannot be a member"; ""
             
             if activeComponents.Contains(iden) then
                 try let memType = components[iden].Value |> List.find (fun (name, _) -> name = newMem)
                     (true, snd memType)
                 with | _ ->
-                    printfn $"Could not find member {mem}"     
-                    (false, Type(Void, None))
+                    if functions.ContainsKey(iden) then
+                        (true, snd functions[iden])
+                    else
+                        printfn $"Could not find member {mem}"     
+                        (false, Type(Void, None))
             else
                 try let memType = customTypes[iden].Value |> List.find (fun (name, _) -> name = newMem)
                     (true, snd memType)
                 with | _ ->
-                    printfn $"Could not find member {mem}"     
-                    (false, Type(Void, None))
+                    if functions.ContainsKey(newMem) then
+                        (true, snd functions[newMem])
+                    else
+                        printfn $"Could not find member {newMem}"     
+                        (false, Type(Void, None))
     | ComponentAccessExpr (iden, _) ->
         if variables.ContainsKey(iden) |> not && constants.ContainsKey(iden) |> not then
             printfn $"{iden} does not exist"; (false, Type(Void, None))
@@ -123,8 +130,7 @@ let rec validateExpr expr =
                 if validateExpr e <> (true, Type(Int, None)) then printfn $"{e} does not evaluate to int"; (false, Type(Void, None))
                 else (true, Type(Int, None))
             | _ -> (true, Type(Int, None))
-        
-    | _ -> (true, Type(Void, None))
+    | Parenthesis expr -> validateExpr expr
     
 let rec validateStatement statement =
     match statement with
@@ -192,11 +198,14 @@ let rec validateStatement statement =
             coms |> List.iter (fun (iden, data) -> if components.ContainsKey(iden) |> not then printfn $"Component {iden} does not exist" )
     | Statement.Expression expr ->
         match expr with
-        | ForExpr ((((_, iden), e), where), exprs) ->
-            constants.Add(iden, snd(validateExpr e) |> Some)
-            if where.IsSome then validateExpr where.Value |> ignore
-            for e in exprs do validateStatement e
-            constants.Remove(iden) |> ignore
+        | ForExpr ((((_, i), e), where), exprs) ->
+            match i with
+            | Identifier iden ->
+                constants.Add(iden, snd(validateExpr e) |> Some)
+                if where.IsSome then validateExpr where.Value |> ignore
+                for e in exprs do validateStatement e
+                constants.Remove(iden) |> ignore
+            | MapDestructuring (key, value) -> ()
         | WhileExpr (expr, exprs) ->
             validateExpr expr |> ignore
             for e in exprs do validateStatement e

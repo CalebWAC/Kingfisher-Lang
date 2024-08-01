@@ -107,8 +107,16 @@ let rec generateExpr expr =
         if iden = "println" || iden = "print" then output.Write("Standard.")
         output.Write($"{iden}(")
         for e in exprs do
-            generateExpr e
-            if List.findIndex (fun expr -> e = expr) exprs <> exprs.Length - 1 then output.Write(",")
+            match e with
+            | LiteralExpr l ->
+                match l with
+                | VoidLiteral _ -> ()
+                | _ ->
+                    generateExpr e
+                    if List.findIndex (fun expr -> e = expr) exprs <> exprs.Length - 1 then output.Write(",")
+            | _ ->
+                generateExpr e
+                if List.findIndex (fun expr -> e = expr) exprs <> exprs.Length - 1 then output.Write(",")
         output.Write(")")
     | ArrayExpr (iden, expr) ->
         output.Write($"{iden}[")
@@ -145,7 +153,7 @@ let rec generateExpr expr =
         | BoolLiteral b -> output.Write($"{b}".ToLower())
         | StringLiteral s -> output.Write($"'{s}'")
         | RuneLiteral c -> output.Write(c)
-        | VoidLiteral -> ()
+        | VoidLiteral _ -> output.Write("()")
         | CollectionLiteral colLit ->
             match colLit with
             | ArrayLiteral (_, exprs) ->
@@ -173,6 +181,10 @@ let rec generateExpr expr =
     | ComponentAccessExpr (i1, i2) ->
         if i1 = "break" then
             output.WriteLine($"{i2} = true")
+    | Parenthesis expr ->
+        output.Write("(")
+        generateExpr expr
+        output.Write(")")
 
 let rec generateStatement stat =
     match stat with
@@ -197,7 +209,7 @@ let rec generateStatement stat =
                                     | Option o -> $"{iden}: Option<{o}>,"
                                     | _ -> $"{iden}: {fst typ.Value},"
                             } |> List.ofSeq |> string |> String.filter (fun c -> c <> ';' && c <> '[') 
-            output.WriteLine($"function {iden}({param[..param.Length - 4]})" + "{") //  : {fst (snd SemanticAnalysis.functions[iden])}
+            output.WriteLine($"public static function {iden}({param[..param.Length - 4]})" + "{") //  : {fst (snd SemanticAnalysis.functions[iden])}
             for expr in exprs do
                 if List.findIndex (fun e -> e = expr) exprs = exprs.Length - 1 then output.Write("return ")
                 generateStatement expr
@@ -270,9 +282,12 @@ let rec generateStatement stat =
         | ForExpr ((((label, iden), expr), where), stats) ->
             if label.IsSome then output.WriteLine($"var {label.Value} = false;")
             
-            output.Write($"for ({iden} in ")
-            generateExpr expr
-            output.WriteLine(") {")
+            match iden with
+            | Identifier i -> 
+                output.Write($"for ({i} in ")
+                generateExpr expr
+                output.WriteLine(") {")
+            | MapDestructuring (key, value) -> ()
             
             if where.IsSome then
                 output.Write("\tif (")
@@ -385,7 +400,6 @@ let generateType statement =
             for c in coms do activeComponents.Remove(c) |> ignore
         | TypeAlias tuple -> failwith "todo"
         | Extension (iden, stats) ->
-            output.WriteLine($"using Main.{iden}Extender;\n")
             output.WriteLine($"class {iden}Extender " + "{")
             for stat in stats do
                 generateStatement stat
@@ -396,6 +410,14 @@ let generate code =
     match code with
     | Success (ast, _) ->
         output.WriteLine("import Entity; import System;")
+        
+        for stat in ast do
+            match stat with
+            | TypeDeclaration decl ->
+                match decl with
+                | Extension (iden, _) -> output.WriteLine($"using Main.{iden}Extender;\n")
+                | _ -> ()
+            | _ -> ()
         
         output.WriteLine(standardLibrary)
         

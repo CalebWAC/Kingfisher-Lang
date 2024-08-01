@@ -104,7 +104,7 @@ let boolLit =
     <?> "bool"
     
 let runeLit = between (pchar '`') parseAlphanumeric (pchar '`') |>> RuneLiteral <?> "rune"
-let voidLit = keyword "()"
+let voidLit = keyword "()" |>> VoidLiteral <?> "void"
 
 
 let range, rangeRef = parserToRef()
@@ -124,26 +124,20 @@ let typeKeyWord = identifier .>>. opt (pchar '?') .>> ws .>>. opt (keyword "arra
                            AST.Type ((if option.IsSome then Option typeKey else typeKey), colType)
 let explicitType = pchar ':' >>. ws >>. typeKeyWord <?> "explicit type"
 
-let rec literal () = floatLit <|> intLit <|> stringLit <|> boolLit <|> runeLit <|>
-                     (arrayLit |>> CollectionLiteral) <|> (mapLit |>> CollectionLiteral) //<|> recordLit <|> tupleLit
-                     |>> LiteralExpr <?> "literal"
 
-and arrayLit = opt (keyword "set") .>> ws .>>. between (pchar '[')
-                 (sepBy1 (literal()) (pchar ',' .>> ws)) (pchar ']')
-                 |>> fun (strOpt, col) -> if strOpt.IsSome then ArrayLiteral(Set, col) else ArrayLiteral(CollectionType.Array, col)
-                 <?> "array/set" 
+let arrayLit, arrayLitRef = parserToRef()
             
-and mapLit = between (pchar '[')
-                (sepBy1
-                    (literal() .>> ws .>> pchar ':' .>> ws .>>. literal())
-                    (pchar ',' .>> ws))
-                (pchar ']') |>> MapLiteral <?> "map"
+let mapLit, mapLitRef = parserToRef() 
                     
-and tupleLit = between (pchar '(')
-                    (sepBy1 (literal()) (pchar ',' .>> ws))
-                    (pchar ')') |>> TupleLiteral <?> "tuple"
-
 let recordLit, recordLitRef = parserToRef()
+                    
+let tupleNameLit = identifier .>> ws .>> pchar ',' .>> ws .>>. identifier
+
+let literal () = floatLit <|> intLit <|> stringLit <|> boolLit <|> runeLit <|>
+                 (arrayLit |>> CollectionLiteral) <|> (mapLit |>> CollectionLiteral) <|> voidLit
+                 |>> LiteralExpr <?> "literal"
+
+
 
 //// Operators \\\\
 let unaryOp =
@@ -176,10 +170,12 @@ let binaryLogOp =
 
 
 //// Expressions \\\\
+let parenExpr, parenExprRef = parserToRef()
 let arrayExpr = identifier .>> ws .>>. between (pchar '[') (literal() <|> (identifier |>> IdentifierExpr)) (pchar ']') |>> ArrayExpr <?> "array access"
 let dataAccessExpr, dataExRef = parserToRef()
 let componentAccessExpr = identifier .>> pchar '@' .>>. identifier |>> ComponentAccessExpr <?> "component access"
-let accessExpr = range <|>
+let accessExpr = parenExpr <|>
+                 range <|>
                  literal() <|>
                  (recordLit |>> LiteralExpr) <|>
                  arrayExpr <|>
@@ -200,7 +196,20 @@ recordLitRef.Value <- between (pchar '{')
                         (ws >>. opt (identifier .>> ws .>> keyword "with") .>> ws .>>.
                          (sepBy1 (identifier .>> ws .>> pchar '=' .>> ws .>>. expr .>> ws) (pchar ',' .>> ws)))
                         (pchar '}') |>> RecordLiteral <?> "record"
+                        
+arrayLitRef.Value <- opt (keyword "set") .>> ws .>>. between (pchar '[')
+                     (sepBy1 expr (pchar ',' .>> ws)) (pchar ']')
+                     |>> fun (strOpt, col) -> if strOpt.IsSome then ArrayLiteral(Set, col) else ArrayLiteral(CollectionType.Array, col)
+                     <?> "array/set"
+                     
+mapLitRef.Value <- between (pchar '[' .>> ws)
+                    (sepBy1
+                        (expr .>> ws .>> pchar ':' .>> ws .>>. expr)
+                        (pchar ',' .>> ws))
+                    (ws .>> pchar ']') |>> MapLiteral <?> "map"
+                    
 dataExRef.Value <- identifier .>> pchar '.' .>>. expr |>> DataAccessExpr <?> "data access"
+parenExprRef.Value <- between (pchar '(') (ws >>. expr .>> ws) (pchar ')') |>> Parenthesis
 
 let rangable = literal() <|> arrayExpr <|> dataAccessExpr <|> componentAccessExpr <|> (identifier |>> IdentifierExpr)
 rangeRef.Value <- rangable .>>. (keyword "..." <|> keyword "..") .>>. opt (rangable .>>. (keyword "..." <|> keyword "..")) .>>. rangable
@@ -269,7 +278,7 @@ let statement, binding, expression, typeDeclaration =
     funcBindRef.Value <- keyword "fun" >>. ws >>. identifier .>> ws .>>. many parameter .>> ws .>>. opt explicitType .>> ws .>> keyword ":=" .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> ws .>> pchar '}' |>> FunctionDeclaration
     ifExpressRef.Value <- ifCond .>> ws .>>. opt (keyword "where" >>. ws >>. expr) .>> ws .>> keyword "then" .>> ws .>> keyword "{" .>> ws .>>. many1 (statement .>> ws) .>> pchar '}' |>> IfExpress
     ifExprRef.Value <- keyword "if" >>. ws >>. ifExpress .>> ws .>>. opt(many1 (keyword "elif" >>. ws >>. ifExpress .>> ws)) .>> ws .>>. opt (keyword "else" >>. ws >>. pchar '{' >>. ws >>. many1 (statement .>> ws) .>> pchar '}') |>> IfExpr <?> "if"
-    forExprRef.Value <- opt (identifier .>> pchar '@') .>> ws .>> keyword "for" .>> ws .>>. identifier .>> ws .>> keyword "in" .>> ws .>>. expr .>> ws .>>. opt (keyword "where" >>. ws >>. expr) .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> pchar '}' |>> ForExpr <?> "for loop"
+    forExprRef.Value <- opt (identifier .>> pchar '@') .>> ws .>> keyword "for" .>> ws .>>. (identifier |>> Identifier <|> (tupleNameLit |>> MapDestructuring)).>> ws .>> keyword "in" .>> ws .>>. expr .>> ws .>>. opt (keyword "where" >>. ws >>. expr) .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> pchar '}' |>> ForExpr <?> "for loop"
     whileExprRef.Value <- keyword "while" >>. ws >>. expr .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> pchar '}' |>> WhileExpr <?> "while loop"
     matchExprRef.Value <- keyword "when" >>. ws >>. identifier .>> ws .>> keyword "is" .>> ws .>> pchar '{' .>> ws .>>. many1 (expr .>> ws .>> keyword "->" .>> ws .>>. many1 (statement .>> ws)) .>> ws .>> pchar '}' |>> MatchExpr <?> "match"
     
@@ -282,6 +291,7 @@ let statement, binding, expression, typeDeclaration =
                                                            | "Update" -> Update
                                                            | "Awake" -> Awake
                                                            | "End" -> End
+                                                           | _ -> Exception "Invalid system run class" |> raise
                             SystemDeclaration((coms, systemType), expr)
     
     extensionRef.Value <- keyword "impl" >>. ws >>. identifier .>> ws .>> keyword ":=" .>> ws .>> pchar '{' .>> ws .>>. many1 (binding <|> typeDeclaration .>> ws) .>> ws .>> pchar '}' |>> Extension
