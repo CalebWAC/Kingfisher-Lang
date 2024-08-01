@@ -9,8 +9,8 @@ let constants = Dictionary<string, Type option>()
 constants.Add("break", None)
 
 let unionValues = Dictionary<string, Type>()
-unionValues.Add("Some", Type(Option Void, None))
-unionValues.Add("None", Type(Option Void, None))
+unionValues.Add("Some", Type(Option Any, None))
+unionValues.Add("None", Type(Option Any, None))
 
 let customTypes = Dictionary<string, (string * Type) list option>()
 customTypes.Add("Vec3", Some ["x", Type(Float, None); "y", Type(Float, None); "z", Type(Float, None)])
@@ -18,9 +18,16 @@ customTypes.Add("Vec3", Some ["x", Type(Float, None); "y", Type(Float, None); "z
 let components = Dictionary<string,  (string * Type) list option>()
 let activeComponents = List<string>()
 
+let sets = List<string>()
+
 let functions = Dictionary<string, Type option list * Type>()
 functions.Add ("println", ([Some(String, None)], (Void, None)))
 functions.Add ("print", ([Some(String, None)], (Void, None)))
+
+// Set related functions
+functions.Add ("contains", ([Some(Any, None)], (Void, None)))
+functions.Add ("add", ([Some(Any, None)], (Void, None)))
+functions.Add ("remove", ([Some(Any, None)], (Bool, None)))
 
 let checkType typ =
     match fst typ with
@@ -140,15 +147,17 @@ let rec validateStatement statement =
             let valid, typ = snd immut |> validateExpr
             checkType typ
             if valid then constants.Add(fst (fst immut), Some typ)
+            if (snd typ).IsSome && (snd typ).Value = Set then sets.Add(fst (fst immut))
         | MutableBinding mut ->
             let valid, typ = snd mut |> validateExpr
             checkType typ
             if valid then variables.Add(fst (fst mut), Some typ)
+            if (snd typ).IsSome && (snd typ).Value = Set then sets.Add(fst (fst mut))
         | FunctionDeclaration func ->
             let param = [ for x in snd (fst (fst func)) do
                                  match x with
                                  | Unspecified iden ->
-                                     constants.Add(iden, Type(Void, None) |> Some)
+                                     constants.Add(iden, Type(Any, None) |> Some)
                                      yield None
                                  | Specified ((_, iden), typOpt) ->
                                      checkType typOpt.Value

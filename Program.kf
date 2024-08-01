@@ -1,4 +1,23 @@
-let map = ['H': 1, 'He': 2, 'Li': 3]
+var fruits = set['apples', 'oranges', 'bananas']
 
-for name, num in map do
-    println map
+fruits.add 'grapes'
+fruits.add 'bananas'
+
+println fruits
+
+if fruits.contains 'apples' then
+    println 'Thar be apples'
+
+fruits.remove 'oranges'
+
+for fruit in fruits do
+    print '$fruit '
+
+println ''
+println fruits.length
+
+let array = [0, 1, 2, 3]
+println ''
+println ''
+println array
+println array[1..3]

@@ -1,8 +1,8 @@
 // Variables and Data Types
-var word = "variable"
+var word = 'variable'
 let immut = 18
-let explicitTyping: rune = 'ß'
-word <- "reassignment and interpolation: ${immut}"
+let explicitTyping: rune = `ß`
+word <- 'reassignment and interpolation: $immut'
 
 // Shorthand Assignment Operators
 var num = 19
@@ -73,7 +73,7 @@ set.add "orange" // doesn't do anything, sets only store unique elements
 var map = ["H": 1, "He": 2, "Li": 3] // map
 map["H"] // 1
 map.add "Be" 4
-for (element, number) in map do () // map iteration
+for element, number in map do () // map iteration
 map.keys; map.values
 
 // Control Flow

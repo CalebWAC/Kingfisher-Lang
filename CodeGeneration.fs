@@ -39,7 +39,6 @@ let output = new StreamWriter("../../../ECS/Main.hx")
 let activeComponents = List<string>()
 let systems = List<string>()
     
-    
 let evalType (typ : Type option) = if typ.IsSome then
                                         match fst typ.Value with
                                         | Option o -> $": Option<{o}>"
@@ -102,7 +101,10 @@ let rec generateExpr expr =
         | Not -> output.Write("!")
         | Negative -> output.Write("-")
         generateExpr expr
-    | IdentifierExpr iden -> output.Write(iden)
+    | IdentifierExpr iden ->
+        if SemanticAnalysis.sets.Contains(iden) then
+            output.Write($"{iden}.data")
+        else output.Write(iden)
     | FunctionCallExpr (iden, exprs) ->
         if iden = "println" || iden = "print" then output.Write("Standard.")
         output.Write($"{iden}(")
@@ -119,9 +121,18 @@ let rec generateExpr expr =
                 if List.findIndex (fun expr -> e = expr) exprs <> exprs.Length - 1 then output.Write(",")
         output.Write(")")
     | ArrayExpr (iden, expr) ->
-        output.Write($"{iden}[")
-        generateExpr expr
-        output.Write("]")
+        match expr with
+        | RangeExpr ((e1, typ), e2) ->
+            output.Write($"{iden}.slice(")
+            generateExpr e1
+            output.Write(", ")
+            generateExpr e2
+            if typ = Inclusive then output.Write(" + 1")
+            output.Write(")")
+        | _ ->
+            output.Write($"{iden}[")
+            generateExpr expr
+            output.Write("]")
     | DataAccessExpr (iden1, iden2) ->
         if activeComponents.Contains(iden1) then
             output.Write($"cast(coms[{activeComponents.IndexOf(iden1)}], {iden1}).data.")
@@ -156,12 +167,20 @@ let rec generateExpr expr =
         | VoidLiteral _ -> output.Write("()")
         | CollectionLiteral colLit ->
             match colLit with
-            | ArrayLiteral (_, exprs) ->
-                output.Write("[")
-                for expr in exprs do
-                    generateExpr expr
-                    if List.findIndex (fun e -> e = expr) exprs <> exprs.Length - 1 then output.Write(", ")
-                output.Write("]")
+            | ArrayLiteral (colType, exprs) ->
+                match colType with
+                | Array ->
+                    output.Write("[")
+                    for expr in exprs do
+                        generateExpr expr
+                        if List.findIndex (fun e -> e = expr) exprs <> exprs.Length - 1 then output.Write(", ")
+                    output.Write("]")
+                | Set ->
+                    output.Write("new Set([")
+                    for expr in exprs do
+                        generateExpr expr
+                        if List.findIndex (fun e -> e = expr) exprs <> exprs.Length - 1 then output.Write(", ")
+                    output.Write("])")
             | MapLiteral exprs ->
                 output.Write("[")
                 for key, value in exprs do
@@ -287,8 +306,14 @@ let rec generateStatement stat =
                 output.Write($"for ({i} in ")
                 generateExpr expr
                 output.WriteLine(") {")
-            | MapDestructuring (key, value) -> ()
-            
+            | MapDestructuring (key, value) ->
+                output.Write($"for ({key} in ")
+                generateExpr expr
+                output.WriteLine(".keys()) {")
+                output.Write($"\tvar {value} = ")
+                generateExpr expr
+                output.WriteLine($"[{key}];")
+                
             if where.IsSome then
                 output.Write("\tif (")
                 generateExpr where.Value
@@ -409,7 +434,7 @@ let generateType statement =
 let generate code =
     match code with
     | Success (ast, _) ->
-        output.WriteLine("import Entity; import System;")
+        output.WriteLine("import Entity; import System; import Set;")
         
         for stat in ast do
             match stat with

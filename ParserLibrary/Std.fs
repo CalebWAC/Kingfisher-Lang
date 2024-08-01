@@ -171,7 +171,7 @@ let binaryLogOp =
 
 //// Expressions \\\\
 let parenExpr, parenExprRef = parserToRef()
-let arrayExpr = identifier .>> ws .>>. between (pchar '[') (literal() <|> (identifier |>> IdentifierExpr)) (pchar ']') |>> ArrayExpr <?> "array access"
+let arrayExpr, arrayExprRef = parserToRef()
 let dataAccessExpr, dataExRef = parserToRef()
 let componentAccessExpr = identifier .>> pchar '@' .>>. identifier |>> ComponentAccessExpr <?> "component access"
 let accessExpr = parenExpr <|>
@@ -208,6 +208,7 @@ mapLitRef.Value <- between (pchar '[' .>> ws)
                         (pchar ',' .>> ws))
                     (ws .>> pchar ']') |>> MapLiteral <?> "map"
                     
+arrayExprRef.Value <- identifier .>> ws .>>. between (pchar '[') expr (pchar ']') |>> ArrayExpr <?> "array access"
 dataExRef.Value <- identifier .>> pchar '.' .>>. expr |>> DataAccessExpr <?> "data access"
 parenExprRef.Value <- between (pchar '(') (ws >>. expr .>> ws) (pchar ')') |>> Parenthesis
 
@@ -278,7 +279,7 @@ let statement, binding, expression, typeDeclaration =
     funcBindRef.Value <- keyword "fun" >>. ws >>. identifier .>> ws .>>. many parameter .>> ws .>>. opt explicitType .>> ws .>> keyword ":=" .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> ws .>> pchar '}' |>> FunctionDeclaration
     ifExpressRef.Value <- ifCond .>> ws .>>. opt (keyword "where" >>. ws >>. expr) .>> ws .>> keyword "then" .>> ws .>> keyword "{" .>> ws .>>. many1 (statement .>> ws) .>> pchar '}' |>> IfExpress
     ifExprRef.Value <- keyword "if" >>. ws >>. ifExpress .>> ws .>>. opt(many1 (keyword "elif" >>. ws >>. ifExpress .>> ws)) .>> ws .>>. opt (keyword "else" >>. ws >>. pchar '{' >>. ws >>. many1 (statement .>> ws) .>> pchar '}') |>> IfExpr <?> "if"
-    forExprRef.Value <- opt (identifier .>> pchar '@') .>> ws .>> keyword "for" .>> ws .>>. (identifier |>> Identifier <|> (tupleNameLit |>> MapDestructuring)).>> ws .>> keyword "in" .>> ws .>>. expr .>> ws .>>. opt (keyword "where" >>. ws >>. expr) .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> pchar '}' |>> ForExpr <?> "for loop"
+    forExprRef.Value <- opt (identifier .>> pchar '@') .>> ws .>> keyword "for" .>> ws .>>. (tupleNameLit |>> MapDestructuring <|> (identifier |>> Identifier)).>> ws .>> keyword "in" .>> ws .>>. expr .>> ws .>>. opt (keyword "where" >>. ws >>. expr) .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> pchar '}' |>> ForExpr <?> "for loop"
     whileExprRef.Value <- keyword "while" >>. ws >>. expr .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> pchar '}' |>> WhileExpr <?> "while loop"
     matchExprRef.Value <- keyword "when" >>. ws >>. identifier .>> ws .>> keyword "is" .>> ws .>> pchar '{' .>> ws .>>. many1 (expr .>> ws .>> keyword "->" .>> ws .>>. many1 (statement .>> ws)) .>> ws .>> pchar '}' |>> MatchExpr <?> "match"
     

@@ -64,6 +64,7 @@ and TypeKeyWord =
     | Map
     | Custom of string
     | Option of TypeKeyWord
+    | Any
 
 and CollectionType =
     | Array
