@@ -1,4 +1,5 @@
 ﻿open System.IO
+open BracketInsertion
 open ParserLibrary.Core
 open ParserLibrary.Std
 open System.Diagnostics
@@ -8,7 +9,10 @@ let main loc =
     use reader = new StreamReader(loc[0])
     let file = reader.ReadToEnd()
     
-    let ast = runString parseProgram file
+    let program = insertBrackets file
+    printfn $"{program}"
+    
+    let ast = runString parseProgram program
 
     ast
     |> printResult

@@ -5,6 +5,7 @@
     <RootNamespace>Kingfisher_Language</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="BracketInsertion.fs" />
     <Compile Include="AST.fs" />
     <Compile Include="ParserLibrary\InputState.fs" />
     <Compile Include="ParserLibrary\Core.fs" />

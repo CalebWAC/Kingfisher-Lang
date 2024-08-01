@@ -240,7 +240,7 @@ let statement, binding, expression, typeDeclaration =
 
     
     // Type Declarations
-    let unionDeclaration = keyword "type" >>. ws >>. identifier .>> ws .>> pchar '=' .>> ws .>>. many1 (pchar '|' >>. ws >>. identifier .>> ws .>>. opt (keyword "of" >>. ws >>. typeKeyWord .>> ws .>>. many (pchar '*' >>. ws >>. typeKeyWord .>> ws)))
+    let unionDeclaration = keyword "type" >>. ws >>. identifier .>> ws .>> keyword ":=" .>> ws .>>. many1 (pchar '|' >>. ws >>. identifier .>> ws .>>. opt (keyword "of" >>. ws >>. typeKeyWord .>> ws .>>. many (pchar '*' >>. ws >>. typeKeyWord .>> ws)))
                            |>> fun (name, cases) ->
                                    let ucases = [
                                        for c in cases do
@@ -250,9 +250,9 @@ let statement, binding, expression, typeDeclaration =
                                    UnionDeclaration (name, ucases)
                            <?> "unionDeclaration"
     
-    let recordDeclaration = keyword "type" >>. ws >>. identifier .>> ws .>> pchar '=' .>> ws .>> pchar '{' .>>. sepBy1 (ws >>. opt (keyword "var") .>> ws .>>. identifier .>> ws .>>. explicitType) (pchar ',') .>> ws .>> pchar '}' |>> RecordDeclaration       
+    let recordDeclaration = keyword "type" >>. ws >>. identifier .>> ws .>> keyword ":=" .>> ws .>> pchar '{' .>>. sepBy1 (ws >>. opt (keyword "var") .>> ws .>>. identifier .>> ws .>>. explicitType) (pchar ',') .>> ws .>> pchar '}' |>> RecordDeclaration       
     
-    let componentDeclaration = keyword "com" >>. ws >>. identifier .>> ws .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>. many1 (identifier .>> ws .>>. explicitType) .>> ws .>> pchar '}' |>> ComponentDeclaration
+    let componentDeclaration = keyword "com" >>. ws >>. identifier .>> ws .>> keyword ":=" .>> ws .>> pchar '{' .>> ws .>>. many1 (identifier .>> ws .>>. explicitType) .>> ws .>> pchar '}' |>> ComponentDeclaration
     
     let systemBinding, sysBindRef = parserToRef()
 
@@ -264,14 +264,14 @@ let statement, binding, expression, typeDeclaration =
     
     
     // Fixing references
-    funcBindRef.Value <- keyword "fun" >>. ws >>. identifier .>> ws .>>. many parameter .>> ws .>>. opt explicitType .>> ws .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> ws .>> pchar '}' |>> FunctionDeclaration
+    funcBindRef.Value <- keyword "fun" >>. ws >>. identifier .>> ws .>>. many parameter .>> ws .>>. opt explicitType .>> ws .>> keyword ":=" .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> ws .>> pchar '}' |>> FunctionDeclaration
     ifExpressRef.Value <- ifCond .>> ws .>>. opt (keyword "where" >>. ws >>. expr) .>> ws .>> keyword "then" .>> ws .>> keyword "{" .>> ws .>>. many1 (statement .>> ws) .>> pchar '}' |>> IfExpress
     ifExprRef.Value <- keyword "if" >>. ws >>. ifExpress .>> ws .>>. opt(many1 (keyword "elif" >>. ws >>. ifExpress .>> ws)) .>> ws .>>. opt (keyword "else" >>. ws >>. pchar '{' >>. ws >>. many1 (statement .>> ws) .>> pchar '}') |>> IfExpr <?> "if"
     forExprRef.Value <- opt (identifier .>> pchar '@') .>> ws .>> keyword "for" .>> ws .>>. identifier .>> ws .>> keyword "in" .>> ws .>>. expr .>> ws .>>. opt (keyword "where" >>. ws >>. expr) .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> pchar '}' |>> ForExpr <?> "for loop"
     whileExprRef.Value <- keyword "while" >>. ws >>. expr .>> ws .>> keyword "do" .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> pchar '}' |>> WhileExpr <?> "while loop"
     matchExprRef.Value <- keyword "when" >>. ws >>. identifier .>> ws .>> keyword "is" .>> ws .>> pchar '{' .>> ws .>>. many1 (expr .>> ws .>> keyword "->" .>> ws .>>. many1 (statement .>> ws)) .>> ws .>> pchar '}' |>> MatchExpr <?> "match"
     
-    sysBindRef.Value <- keyword "sys" >>. ws >>. sepBy1 identifier ws .>> ws .>>. opt (pchar '|' >>. ws >>. identifier .>> ws) .>> pchar '=' .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> ws .>> pchar '}'
+    sysBindRef.Value <- keyword "sys" >>. ws >>. sepBy1 identifier ws .>> ws .>>. opt (pchar '|' >>. ws >>. identifier .>> ws) .>> keyword ":=" .>> ws .>> pchar '{' .>> ws .>>. many1 (statement .>> ws) .>> ws .>> pchar '}'
                         |>> fun ((coms, sys), expr) ->
                             let systemType = match sys with
                                              | None -> Start

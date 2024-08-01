@@ -1,5 +1,9 @@
-let max = 10
+let max = 60
 
-for x in 0..2...max do {
-    println x
-}
+fun printSquared x :=
+    let square = x * x
+    println square
+
+for x in 0..5...max do
+    if x % 3 = 0 then 
+        printSquared x

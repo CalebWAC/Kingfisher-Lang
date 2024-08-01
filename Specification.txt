@@ -45,6 +45,8 @@ b = a & c, b = a | c // shortened syntax for (b = a && b = c)
 for i in 0 .. 3 do // looping over range
 array[..3], array[6..] // range operator for slicing
 
+// Note: for functions and type declarations, use := instead of = currently
+
 // Functions
 fun add a b = a + b // basic function (int int -> int)
 add a b 
