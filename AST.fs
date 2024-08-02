@@ -82,11 +82,7 @@ and BinaryArithmeticOperator =
     | Div
     | Mod
     | Exp
-
-and BinaryLogicalOperator =
-    | And
-    | Or
-
+    
 and BinaryComparisonOperator =
     | Equal
     | NotEqual
@@ -94,6 +90,14 @@ and BinaryComparisonOperator =
     | GreaterThan
     | LessEqual
     | GreaterEqual
+
+and BinaryLogicalOperator =
+    | And
+    | Or
+    
+and BinaryShortLogicalOperator =
+    | ShortAnd
+    | ShortOr
 
 and UnaryOperator =
     | Not
@@ -122,7 +126,7 @@ and MatchExpr = Identifier * (Expression * Statement list) list
 
 and Expression = 
     | BinaryLogicalExpr of Expression * (BinaryLogicalOperator * Expression) list
-    | BinaryComparisonExpr of (Expression * BinaryComparisonOperator) * Expression
+    | BinaryComparisonExpr of ((Expression * BinaryComparisonOperator) * Expression) * (BinaryShortLogicalOperator * Expression) list
     | BinaryArithmeticExpr of Expression * (BinaryArithmeticOperator * Expression) list
     | UnaryExpr of UnaryOperator * Expression
     | IdentifierExpr of Identifier
@@ -133,6 +137,7 @@ and Expression =
     | RangeExpr of (Expression * RangeType) * Expression
     | Parenthesis of Expression
     | LiteralExpr of Literal
+    | Lambda of Identifier list * Statement list
 
 and RangeType = 
     | Exclusive

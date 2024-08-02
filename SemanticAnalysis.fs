@@ -29,6 +29,14 @@ functions.Add ("contains", ([Some(Any, None)], (Void, None)))
 functions.Add ("add", ([Some(Any, None)], (Void, None)))
 functions.Add ("remove", ([Some(Any, None)], (Bool, None)))
 
+// Array related functions
+functions.Add ("filter", ([Some(Void, None)], (Any, Some Array)))
+functions.Add ("indexOf", ([Some(Any, None)], (Any, None)))
+functions.Add ("map", ([Some(Void, None)], (Any, Some Array)))
+functions.Add ("push", ([Some(Void, None)], (Void, None)))
+functions.Add ("pop", ([], (Int, None)))
+functions.Add ("reverse", ([], (Void, None)))
+
 let checkType typ =
     match fst typ with
     | Custom s ->
@@ -43,9 +51,12 @@ let rec validateExpr expr =
         let t2 = [ for term in e2 -> validateExpr (snd term) |> fst ]
         if fst t1 && List.forall id t2 then (true, snd t1)
         else (false, Type(Void, None))
-    | BinaryComparisonExpr (e1, e2) ->
-        let t1 = validateExpr (fst e1)
+    | BinaryComparisonExpr (((e1, _), e2), others) ->
+        let t1 = validateExpr e1
         let t2 = validateExpr e2
+        
+        for e in others do validateExpr (snd e) |> ignore
+        
         if fst t1 && fst t2 && snd t1 = snd t2 then
             (true, Type(Bool, None))
         else (false, Type(Void, None))
@@ -120,16 +131,12 @@ let rec validateExpr expr =
                         | CollectionLiteral c -> match c with
                                                  | ArrayLiteral (col, _) -> Type(Int, Some col)
                                                  | MapLiteral _ -> Type(Map, None)
-                        | RecordLiteral (other, members) ->
+                        | RecordLiteral (_, members) ->
                             let mutable ret = Type(Void, None)
                             for cusTyp in customTypes do
                                 let typ = Seq.zip cusTyp.Value.Value members
                                           |> Seq.forall (fun (c, m) -> fst c = fst m && snd c = snd (validateExpr (snd m)))
                                 if typ then ret <- Type(Custom cusTyp.Key, None)
-                                
-                            if other.IsSome then
-                                let otherType = try variables[other.Value] with | _ -> try constants[other.Value] with | _ -> System.Exception $"{other} does not exist" |> raise
-                                if otherType.Value <> ret then printfn $"The type {otherType} of {other} is not equal to {ret}"
                             ret
                         | _ -> Type (Void, None)
         (true, litToType)
@@ -143,8 +150,13 @@ let rec validateExpr expr =
                 else (true, Type(Int, None))
             | _ -> (true, Type(Int, None))
     | Parenthesis expr -> validateExpr expr
+    | Lambda (idens, stats) ->
+        for i in idens do constants.Add(i, Type(Any, None) |> Some)
+        for stat in stats do validateStatement stat
+        for i in idens do constants.Remove(i) |> ignore
+        (true, Type(Void, None))
     
-let rec validateStatement statement =
+and validateStatement statement =
     match statement with
     | Binding bind ->
         match bind with

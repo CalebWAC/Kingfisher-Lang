@@ -1,5 +1,13 @@
-fun add a (to b) :=
-    a + b
+let arr = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+println arr
 
-let added = add 7 to: 8
-println added
+let evens = arr.filter (num => num % 2 = 0)
+println evens
+
+let squared = evens.map (num => num * num)
+println squared
+
+for num in arr do
+    for even in evens do
+        if num = even | 5 then
+            println num

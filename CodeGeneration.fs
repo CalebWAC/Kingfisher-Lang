@@ -56,7 +56,7 @@ let rec generateExpr expr =
                            | Or -> "||"
             output.Write($" {operator} ")
             generateExpr e2
-    | BinaryComparisonExpr ((e1, op), e2) ->
+    | BinaryComparisonExpr (((e1, op), e2), others) ->
         generateExpr e1
         let operator = match op with
                        | Equal -> "=="
@@ -67,6 +67,16 @@ let rec generateExpr expr =
                        | GreaterEqual -> ">="
         output.Write($" {operator} ")
         generateExpr e2
+        
+        for e in others do
+            match fst e with
+            | ShortAnd -> output.Write(" && ")
+            | ShortOr -> output.Write(" || ")
+            
+            generateExpr e1
+            output.Write($" {operator} ")
+            generateExpr (snd e)
+            
     | BinaryArithmeticExpr (e1, terms) -> 
         if fst terms[0] <> Exp then
             generateExpr e1
@@ -205,8 +215,18 @@ let rec generateExpr expr =
         output.Write("(")
         generateExpr expr
         output.Write(")")
+    | Lambda (idens, stats) ->
+        output.Write("function(")
+        for i in idens do
+            output.Write(i)
+            if List.findIndex (fun va -> va = i) idens <> idens.Length - 1 then output.Write(",")
+        output.Write(") { ")
+        for stat in stats do
+            if List.findIndex (fun e -> e = stat) stats = stats.Length - 1 then output.Write("return ")
+            generateStatement stat
+        output.Write(" }")
 
-let rec generateStatement stat =
+and generateStatement stat =
     match stat with
     | Binding bind ->
         match bind with
