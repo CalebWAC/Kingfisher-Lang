@@ -1,13 +1,10 @@
-let arr = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+let arr = [ for i in 0...10 -> i ]
 println arr
 
-let evens = arr.filter (num => num % 2 = 0)
-println evens
-
-let squared = evens.map (num => num * num)
-println squared
-
-for num in arr do
-    for even in evens do
-        if num = even | 5 then
-            println num
+let miniArr = [-2, 5, 9]
+when miniArr is
+    [1, 2, 3] -> println 'Simple counting'
+    [2, 4, 6] -> println 'Counting by twos'
+    [7, 8, 9] -> println 'No longer possible'
+    [a, b, c] where a < b && b < c -> println 'Its ascending'
+    [_, _, _] -> println 'Out of order'

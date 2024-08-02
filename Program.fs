@@ -13,8 +13,8 @@ let main loc =
     
     let ast = runString parseProgram program
 
-    ast
-    |> printResult
+    //ast
+    //|> printResult
 
     SemanticAnalysis.analyze ast
     CodeGeneration.generate ast

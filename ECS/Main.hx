@@ -29,20 +29,15 @@ import Entity; import System; import Set;
 
 class Main {
 	public static function main() {
-var arr  = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+var arr  = [for (i in 0...10 + 1) 
+i];
 Standard.println(arr);
-var evens  = arr.filter((function(num) { return num % 2 == 0;
- }));
-Standard.println(evens);
-var squared  = evens.map((function(num) { return num * num;
- }));
-Standard.println(squared);
-for (num in arr) {
-for (even in evens) {
-if (num == even || num == 5) {
-Standard.println(num);
-}
-}
+var miniArr  = [-2, 5, 9];
+switch (miniArr) {case [1, 2, 3]: Standard.println('Simple counting');
+case [2, 4, 6]: Standard.println('Counting by twos');
+case [7, 8, 9]: Standard.println('No longer possible');
+case [a, b, c] if (a < b && b < c): Standard.println('Its ascending');
+case [_, _, _, ]: Standard.println('Out of order');
 }
 		var systems = new SystemManager();
 		systems.run();

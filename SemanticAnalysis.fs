@@ -129,7 +129,24 @@ let rec validateExpr expr =
                         | StringLiteral _ -> Type (String, None)
                         | RuneLiteral _ -> Type (Rune, None)
                         | CollectionLiteral c -> match c with
-                                                 | ArrayLiteral (col, _) -> Type(Int, Some col)
+                                                 | ArrayLiteral (col, form) ->
+                                                     match form with
+                                                     | Standard _ -> Type(Any, Some col)
+                                                     | Comprehension (((var, expr), where), expr2) ->
+                                                         match var with
+                                                         | Identifier iden -> constants.Add(iden, snd(validateExpr expr) |> Some)
+                                                         | MapDestructuring _ -> ()
+                                                         
+                                                         validateExpr expr |> ignore
+                                                         if where.IsSome then validateExpr where.Value |> ignore
+                                                         
+                                                         let ret = validateExpr expr2 |> snd
+                                                         
+                                                         match var with
+                                                         | Identifier iden -> constants.Remove(iden) |> ignore
+                                                         | MapDestructuring _ -> ()
+                                                         
+                                                         ret
                                                  | MapLiteral _ -> Type(Map, None)
                         | RecordLiteral (_, members) ->
                             let mutable ret = Type(Void, None)
@@ -255,8 +272,7 @@ and validateStatement statement =
             | None -> ()
         | MatchExpr (_, cases) ->
             for case in cases do
-                for statement in snd case do
-                    validateStatement statement
+                validateStatement (snd case)
         | Expression e -> validateExpr e |> ignore
     | TypeDeclaration decl ->
         match decl with

@@ -178,20 +178,38 @@ let rec generateExpr expr =
         | VoidLiteral _ -> output.Write("()")
         | CollectionLiteral colLit ->
             match colLit with
-            | ArrayLiteral (colType, exprs) ->
+            | ArrayLiteral (colType, form) ->
                 match colType with
-                | Array ->
-                    output.Write("[")
+                | Array -> output.Write("[")
+                | Set -> output.Write("new Set([")
+                    
+                match form with
+                | Standard exprs ->
                     for expr in exprs do
                         generateExpr expr
                         if List.findIndex (fun e -> e = expr) exprs <> exprs.Length - 1 then output.Write(", ")
-                    output.Write("]")
-                | Set ->
-                    output.Write("new Set([")
-                    for expr in exprs do
+                | Comprehension(((var, expr), where), expr2) ->
+                    match var with
+                    | Identifier i -> 
+                        output.Write($"for ({i} in ")
                         generateExpr expr
-                        if List.findIndex (fun e -> e = expr) exprs <> exprs.Length - 1 then output.Write(", ")
-                    output.Write("])")
+                        output.WriteLine(") ")
+                    | MapDestructuring (key, value) ->
+                        output.Write($"for ({key} in ")
+                        generateExpr expr
+                        output.WriteLine(".keys()) ")
+                        output.Write($"\tvar {value} = ")
+                        generateExpr expr
+                        output.WriteLine($"[{key}];")
+                        
+                    if where.IsSome then
+                        output.Write("if (")
+                        generateExpr where.Value
+                        output.WriteLine(") ")
+                        
+                    generateExpr expr2
+                    
+                if colType = Array then output.Write("]") else output.Write("])")
             | MapLiteral exprs ->
                 output.Write("[")
                 for key, value in exprs do
@@ -344,10 +362,15 @@ and generateStatement stat =
             output.Write($"switch ({iden}) " + "{")
             for case in cases do
                 output.Write("case ")
-                generateExpr (fst case)
+                generateExpr (fst (fst case))
+                
+                if (snd (fst case)).IsSome then
+                    output.Write(" if (")
+                    generateExpr (snd (fst case)).Value
+                    output.Write(")")
+                
                 output.Write(": ")
-                for c in snd case do
-                    generateStatement c
+                generateStatement (snd case)
             output.WriteLine("}")
         | Expression expression ->
             generateExpr expression

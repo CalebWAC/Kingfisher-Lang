@@ -122,7 +122,7 @@ and ForVar =
     | MapDestructuring of Identifier * Identifier
 
 and WhileExpr = Expression * Statement list 
-and MatchExpr = Identifier * (Expression * Statement list) list
+and MatchExpr = Identifier * ((Expression * Expression option) * Statement) list
 
 and Expression = 
     | BinaryLogicalExpr of Expression * (BinaryLogicalOperator * Expression) list
@@ -158,5 +158,9 @@ and Literal =
     | TupleLiteral of Expression list
 
 and CollectionLiteral =
-    | ArrayLiteral of CollectionType * Expression list
+    | ArrayLiteral of CollectionType * ArrayLiteralForm
     | MapLiteral of (Expression * Expression) list
+    
+and ArrayLiteralForm =
+    | Standard of Expression list
+    | Comprehension of ((ForVar * Expression) * Expression option) * Expression
