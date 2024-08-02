@@ -1,23 +1,5 @@
-var fruits = set['apples', 'oranges', 'bananas']
+fun add a (to b) :=
+    a + b
 
-fruits.add 'grapes'
-fruits.add 'bananas'
-
-println fruits
-
-if fruits.contains 'apples' then
-    println 'Thar be apples'
-
-fruits.remove 'oranges'
-
-for fruit in fruits do
-    print '$fruit '
-
-println ''
-println fruits.length
-
-let array = [0, 1, 2, 3]
-println ''
-println ''
-println array
-println array[1..3]
+let added = add 7 to: 8
+println added

@@ -71,28 +71,66 @@ let identifier = parseLetter .>>. manyChars parseAlphanumeric
 
 
 //// Number Based \\\\
-let intLit =
-    let resultToInt (sign, dlist) =
+let decLit =
+    let resultToInt ((sign, dlist), unsigned : char option) =
         let i = dlist |> int
         match sign with
-        | Some _ -> -i
+        | Some _ -> if unsigned.IsSome then Exception "uint cannot be negative" |> raise else -i
         | None -> i
          
-    opt (pchar '-') .>>. many1Chars digit
+    opt (pchar '-') .>>. many1Chars digit .>>. opt (pchar 'u')
     |>> resultToInt
     |>> IntLiteral
     <?> "int"
+   
+let hexLit =
+    let resultToInt (sign, dlist) =
+        let i = Convert.ToInt32(dlist, 16)
+        match sign with
+        | Some _ -> -i
+        | None -> i
+    
+    opt (pchar '-') .>> keyword "0x" .>>. many1Chars digit
+    |>> resultToInt
+    |>> IntLiteral
+    <?> "hex literal"
+
+let binLit =
+    let resultToInt (sign, dlist) =
+        let i = Convert.ToInt32(dlist, 2)
+        match sign with
+        | Some _ -> -i
+        | None -> i
+        
+    opt (pchar '-') .>> keyword "0b" .>>. many1Chars digit
+    |>> resultToInt
+    |>> IntLiteral
+    <?> "bin literal"
+    
+let octLit =
+    let resultToInt (sign, dlist) =
+        let i = Convert.ToInt32(dlist, 8)
+        match sign with
+        | Some _ -> -i
+        | None -> i
+        
+    opt (pchar '-') .>> keyword "0o" .>>. many1Chars digit
+    |>> resultToInt
+    |>> IntLiteral
+    <?> "oct literal"
+    
+let intLit = binLit <|> octLit <|> hexLit <|> decLit
     
 let floatLit =
-    let resultToFloat (((sign, digits1), _), digits2) =
-        let f = $"{digits1}.{digits2}" |> float
+    let resultToFloat ((((sign, digits1), _), digits2), dec) =
+        let f = $"{digits1}.{digits2}" |> double
         match sign with
-        | Some _ -> -f
-        | None -> f
+        | Some _ -> (-f, dec)
+        | None -> (f, dec)
         
-    opt (pchar '-') .>>. manyChars digit .>>. pchar '.' .>>. many1Chars digit
+    opt (pchar '-') .>>. manyChars digit .>>. pchar '.' .>>. many1Chars digit .>>. opt (pchar 'd')
     |>> resultToFloat
-    |>> FloatLiteral
+    |>> (fun (f, dec) -> if dec.IsNone then f |> float |> FloatLiteral else f |> DoubleLiteral)
     <?> "float"
         
 
@@ -183,7 +221,7 @@ let accessExpr = parenExpr <|>
                  componentAccessExpr <|>
                  (identifier |>> IdentifierExpr) <?> "access expr"
 
-let funcExpr() = identifier .>> ws1NoNl .>>. sepBy1 accessExpr ws1NoNl |>> FunctionCallExpr <|> accessExpr <?> "function call"
+let funcExpr() = identifier .>> ws1NoNl .>>. sepBy1 (opt (identifier .>> pchar ':') .>> ws .>>. accessExpr) ws1NoNl |>> FunctionCallExpr <|> accessExpr <?> "function call"
 let unaryExpr = (unaryOp .>>. funcExpr()) |>> UnaryExpr <|> funcExpr() <?> "unary expression"
 
 let binaryArithExpr = (unaryExpr .>>. many1 (ws >>. binaryArithOp .>> ws .>>. unaryExpr)) |>> BinaryArithmeticExpr <|> unaryExpr <?> "binaryArth expr"

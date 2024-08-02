@@ -68,8 +68,9 @@ let rec validateExpr expr =
         else
             if functions.ContainsKey(iden) then
                 let callValid = exprs 
-                                |> List.forall (fun expr ->
-                                    try snd (validateExpr expr) = ((fst(functions[iden]))[exprs |> List.findIndex (fun e -> e = expr)]).Value
+                                |> List.forall (fun e ->
+                                    let expr = snd e
+                                    try snd (validateExpr expr) = ((fst(functions[iden]))[exprs |> List.findIndex (fun ex -> ex = e)]).Value
                                     with | _ -> true)
                 (callValid, (snd functions[iden]))
             else (true, unionValues[iden])
@@ -119,12 +120,16 @@ let rec validateExpr expr =
                         | CollectionLiteral c -> match c with
                                                  | ArrayLiteral (col, _) -> Type(Int, Some col)
                                                  | MapLiteral _ -> Type(Map, None)
-                        | RecordLiteral (_, members) ->
+                        | RecordLiteral (other, members) ->
                             let mutable ret = Type(Void, None)
                             for cusTyp in customTypes do
                                 let typ = Seq.zip cusTyp.Value.Value members
                                           |> Seq.forall (fun (c, m) -> fst c = fst m && snd c = snd (validateExpr (snd m)))
                                 if typ then ret <- Type(Custom cusTyp.Key, None)
+                                
+                            if other.IsSome then
+                                let otherType = try variables[other.Value] with | _ -> try constants[other.Value] with | _ -> System.Exception $"{other} does not exist" |> raise
+                                if otherType.Value <> ret then printfn $"The type {otherType} of {other} is not equal to {ret}"
                             ret
                         | _ -> Type (Void, None)
         (true, litToType)
@@ -146,7 +151,7 @@ let rec validateStatement statement =
         | ImmutableBinding immut ->
             let valid, typ = snd immut |> validateExpr
             checkType typ
-            if valid then constants.Add(fst (fst immut), Some typ)
+            constants.Add(fst (fst immut), Some typ)
             if (snd typ).IsSome && (snd typ).Value = Set then sets.Add(fst (fst immut))
         | MutableBinding mut ->
             let valid, typ = snd mut |> validateExpr
@@ -160,8 +165,10 @@ let rec validateStatement statement =
                                      constants.Add(iden, Type(Any, None) |> Some)
                                      yield None
                                  | Specified ((_, iden), typOpt) ->
-                                     checkType typOpt.Value
-                                     constants.Add(iden, typOpt)
+                                     if typOpt.IsSome then
+                                         checkType typOpt.Value
+                                         constants.Add(iden, typOpt)
+                                     else constants.Add(iden, Type(Any, None) |> Some)
                                      yield typOpt
                         ]
             for e in snd func do validateStatement e
@@ -175,7 +182,7 @@ let rec validateStatement statement =
                                   | _ -> printfn "Must end function with expression"; Type(Void, None)
                               | _ -> printfn "Must end function with expression"; Type(Void, None)
             
-            functions.Add(fst (fst (fst func)), (Seq.toList param, retType))
+            try functions.Add(fst (fst (fst func)), (Seq.toList param, retType)) with | _ -> ()
             for x in snd(fst (fst func)) do
                 match x with
                 | Unspecified iden ->

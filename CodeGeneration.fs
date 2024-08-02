@@ -109,15 +109,15 @@ let rec generateExpr expr =
         if iden = "println" || iden = "print" then output.Write("Standard.")
         output.Write($"{iden}(")
         for e in exprs do
-            match e with
+            match snd e with
             | LiteralExpr l ->
                 match l with
                 | VoidLiteral _ -> ()
                 | _ ->
-                    generateExpr e
+                    generateExpr (snd e)
                     if List.findIndex (fun expr -> e = expr) exprs <> exprs.Length - 1 then output.Write(",")
             | _ ->
-                generateExpr e
+                generateExpr (snd e)
                 if List.findIndex (fun expr -> e = expr) exprs <> exprs.Length - 1 then output.Write(",")
         output.Write(")")
     | ArrayExpr (iden, expr) ->
@@ -161,6 +161,7 @@ let rec generateExpr expr =
         match lit with
         | IntLiteral i -> output.Write(i)
         | FloatLiteral f -> output.Write(f)
+        | DoubleLiteral d -> output.Write(d)
         | BoolLiteral b -> output.Write($"{b}".ToLower())
         | StringLiteral s -> output.Write($"'{s}'")
         | RuneLiteral c -> output.Write(c)
@@ -219,20 +220,7 @@ let rec generateStatement stat =
             output.Write($"var {iden} {exType} = ")
             generateExpr expr
             output.WriteLine(";")
-        | FunctionDeclaration (((iden, params), retType), exprs) ->
-            let param = seq { for p in params ->
-                                match p with
-                                | Unspecified iden -> $"{iden}, "
-                                | Specified ((_, iden), typ) ->
-                                    match fst typ.Value with
-                                    | Option o -> $"{iden}: Option<{o}>,"
-                                    | _ -> $"{iden}: {fst typ.Value},"
-                            } |> List.ofSeq |> string |> String.filter (fun c -> c <> ';' && c <> '[') 
-            output.WriteLine($"public static function {iden}({param[..param.Length - 4]})" + "{") //  : {fst (snd SemanticAnalysis.functions[iden])}
-            for expr in exprs do
-                if List.findIndex (fun e -> e = expr) exprs = exprs.Length - 1 then output.Write("return ")
-                generateStatement expr
-            output.WriteLine("}")
+        | FunctionDeclaration _ -> ()
         | Reassignment ((iden, op), expr) ->
             generateExpr iden
             output.Write($" = ")
@@ -431,6 +419,23 @@ let generateType statement =
             output.WriteLine("}")
     | _ -> ()
 
+let generateFunction iden params retTyp exprs =
+    let param = seq { for p in params ->
+                        match p with
+                        | Unspecified iden -> $"{iden}, "
+                        | Specified ((_, iden), typ) ->
+                            if typ.IsSome then
+                                match fst typ.Value with
+                                | Option o -> $"{iden}: Option<{o}>,"
+                                | _ -> $"{iden}: {fst typ.Value},"
+                            else $"{iden}, "
+                    } |> List.ofSeq |> string |> String.filter (fun c -> c <> ';' && c <> '[') 
+    output.WriteLine($"public static function {iden}({param[..param.Length - 4]})" + "{") //  : {fst (snd SemanticAnalysis.functions[iden])}
+    for expr in exprs do
+        if List.findIndex (fun e -> e = expr) exprs = exprs.Length - 1 then output.Write("return ")
+        generateStatement expr
+    output.WriteLine("}")
+
 let generate code =
     match code with
     | Success (ast, _) ->
@@ -450,6 +455,15 @@ let generate code =
             generateType statement
         
         output.WriteLine("class Main {")
+        
+        for stat in ast do
+            match stat with
+            | Binding bind ->
+                match bind with
+                | FunctionDeclaration (((iden, params), retType), exprs) -> generateFunction iden params retType exprs
+                | _ -> ()
+            | _ -> ()
+        
         output.WriteLine("\tpublic static function main() {")
         
         for statement in ast do

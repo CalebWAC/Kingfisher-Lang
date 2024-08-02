@@ -126,7 +126,7 @@ and Expression =
     | BinaryArithmeticExpr of Expression * (BinaryArithmeticOperator * Expression) list
     | UnaryExpr of UnaryOperator * Expression
     | IdentifierExpr of Identifier
-    | FunctionCallExpr of Identifier * Expression list
+    | FunctionCallExpr of Identifier * (Identifier option * Expression) list
     | ArrayExpr of Identifier * Expression
     | DataAccessExpr of Identifier * Expression
     | ComponentAccessExpr of Identifier * Identifier
@@ -143,6 +143,7 @@ and RangeType =
 and Literal = 
     | IntLiteral of int
     | FloatLiteral of float
+    | DoubleLiteral of double
     | BoolLiteral of bool
     | StringLiteral of string
     | RuneLiteral of char
