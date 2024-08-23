@@ -1,10 +1,12 @@
-let arr = [ for i in 0...10 -> i ]
-println arr
+let nums = [ for i in 0...10 -> i ]
 
-let miniArr = [-2, 5, 9]
-when miniArr is
-    [1, 2, 3] -> println 'Simple counting'
-    [2, 4, 6] -> println 'Counting by twos'
-    [7, 8, 9] -> println 'No longer possible'
-    [a, b, c] where a < b && b < c -> println 'Its ascending'
-    [_, _, _] -> println 'Out of order'
+let squared = nums.map (num => num * num)
+
+let largeSquares = squared.filter (num => num > 50)
+
+for num in largeSquares do
+    print '$num '
+
+
+
+    

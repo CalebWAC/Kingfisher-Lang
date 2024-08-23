@@ -11,27 +11,23 @@ Kingfisher is a programming language designed with built-in syntax for an entity
 ## Current State
 The majority of the language is functional, including control flow, custom type declarations, and any ECS-related syntax. In its current state, the language does not have tuples or complex pattern matching implemented, but the rest of the features listed in the specification file should work. Kingfisher is compiled to Haxe, so in order to run a Kingfisher program, one will need the Haxe compiler installed.
 
-## Sample code
+## Sample Program
+![output](KingfisherLang.PNG)
+
+## Other Sample Code
 ```
-let arr = [ for i in 0...10 -> i ]
+fun add a b = a + b
+add 3 4
+
+let arr = [-2, 5, 9]
+when arr is
+    [2, 4, 6] -> println 'Counting by twos'
+    [a, b, c] where a < b && b < c -> println 'Its ascending'
+    [_, _, _] -> println 'Out of order'
 
 for e in arr do
     if e % 2 = 0 then println e 
     else println 'Odd number'
-
-
-fun add a b = a + b
-add 3 4
-
-when x is
-    1, 2 -> ()
-    1..5 -> ()
-    (_, 'a') -> ()
-    { _, field } -> ()
-    [_, 1, 2] -> ()
-    Color.Red -> ()
-    Some num where num = 5 -> ()
-    _ -> ()
 
 // ECS 
 
